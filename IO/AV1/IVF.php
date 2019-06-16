@@ -10,6 +10,7 @@ if (is_readable('vendor/autoload.php')) {
     require 'vendor/autoload.php';
 } else {
     require_once 'IO/Bit.php';
+    require_once 'IO/AV1/OBU.php';
 }
 
 class IO_AV1_IVF {
@@ -47,7 +48,15 @@ class IO_AV1_IVF {
             $frame = [];
             $frame["size"] = $bit->getUI32LE();
             $frame["timestamp"] = $bit->getUI64LE();
-            $frame["payload"] = $bit->getData($frame["size"]);
+            $payload = $bit->getData($frame["size"]);
+            $frame["payload"] = $payload;
+            try {
+                $obu = new IO_AV1_OBU();
+                $obu->parse($payload);
+                $frame["obu"] = $obu;
+            } catch (Exception $e) {
+                throw $e;
+            }
             $this->frames []= $frame;
         }
     }
@@ -73,6 +82,9 @@ class IO_AV1_IVF {
                 printf("%02x ", ord($frame["payload"][$j]));
             }
             echo "\n";
+            if (isset($frame["obu"])) {
+                $frame["obu"]->dump($opts);
+            }
         }
     }
 }

@@ -19,7 +19,7 @@ class IO_AV1_Bit extends IO_Bit {
     function get_uvlc($n) {
         $leadingZeros = 0;
         while (true) {
-            $done = $this->getUIBit();
+            $done = $this->get_f(1);
             if ($done)
                 break;
             $leadingZeros++;
@@ -27,7 +27,29 @@ class IO_AV1_Bit extends IO_Bit {
         if ($leadingZeros >= 32) {
             return (1 << 32) - 1;
         }
-        $value = $this->getUIBits($leadingZeros);
+        $value = $this->get_f($leadingZeros);
         return $value + (1 << $leadingZeros) - 1;
+    }
+
+    function get_le($n) {
+        $t = 0;
+        for ($i = 0 ; $i < $n ; $i++) {
+            $byte = $this->get_f(8);
+            $t += (byte << ($i * 8));
+        }
+        return $t;
+    }
+    function get_leb128() {
+        $value = 0;
+        // $Leb128Bytes = 0;
+        for ($i = 0 ; $i < 8 ; $i++) {
+            $leb128_byte = $this->get_f(8);
+            $value |= (($leb128_byte & 0x7f) << ($i*7));
+            // $Leb128Bytes += 1
+            if (! ($leb128_byte & 0x80)) {
+                break;
+            }
+        }
+        return $value;
     }
 }
