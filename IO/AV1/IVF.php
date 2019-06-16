@@ -33,7 +33,7 @@ class IO_AV1_IVF {
         $bit->input($data);
         $this->signature = $bit->getData(4);
         $this->version = $bit->getUI16LE();
-        $this->length = $bit->getUI16LE();
+        $this->headerLength = $bit->getUI16LE();
         $this->codec = $bit->getData(4);
         $this->width = $bit->getUI16LE();
         $this->height = $bit->getUI16LE();
@@ -58,7 +58,7 @@ class IO_AV1_IVF {
         return $this->frames[$i]["payload"];
     }
     function dump($opts = array()) {
-        echo "signature:{$this->signature} version:{$this->version} length:{$this->length}\n";
+        echo "signature:{$this->signature} version:{$this->version} headerLength:{$this->headerLength}\n";
         echo "codec:{$this->codec} width:{$this->width} height:{$this->height}\n";
         echo "frameRate:{$this->fps}={$this->fpsNum}/{$this->fpsDenom} frameNum:{$this->frameNum}\n";
         if ($this->frameNum != count($this->frames)) {
