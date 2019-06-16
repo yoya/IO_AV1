@@ -12,7 +12,7 @@ if (is_readable('vendor/autoload.php')) {
     require_once 'IO/Bit.php';
 }
 
-class IO_AF1_Bit extends IO_Bit {
+class IO_AV1_Bit extends IO_Bit {
     function get_f($n) {
         return $this->getUIBits($n);
     }
