@@ -51,7 +51,7 @@ class IO_AV1_IVF {
             $this->frames []= $frame;
         }
     }
-    function getFrameNum($i) {
+    function getFrameNum() {
         return $this->frameNum;
     }
     function getPayload($i) {
