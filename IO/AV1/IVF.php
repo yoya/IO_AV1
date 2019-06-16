@@ -51,8 +51,11 @@ class IO_AV1_IVF {
             $this->frames []= $frame;
         }
     }
-    function getPayload() {
-        return substr($this->_ivfData, 32);
+    function getFrameNum($i) {
+        return $this->frameNum;
+    }
+    function getPayload($i) {
+        return $this->frames[$i]["payload"];
     }
     function dump($opts = array()) {
         echo "signature:{$this->signature} version:{$this->version} length:{$this->length}\n";
