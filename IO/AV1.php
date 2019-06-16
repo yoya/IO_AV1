@@ -9,8 +9,8 @@ if (is_readable('vendor/autoload.php')) {
     require 'vendor/autoload.php';
 } else {
     require_once 'IO/AV1/IVF.php';
+    require_once 'IO/AV1/OBU.php';
 }
-
 
 class IO_AV1 {
     var $IVF = null;
@@ -22,16 +22,25 @@ class IO_AV1 {
             try {
                 $ivf->parse($av1Data, $opts);
                 $this->IVF = $ivf;
-                $av1Data = $ivf->getPayload();
+            } catch (Exception $e) {
+                throw $e;
+            }
+        } else {
+            try {
+                $obu = new IO_AV1_OBU();
+                $obu->parse($av1Data);
+                $this->OBU = $obu;
             } catch (Exception $e) {
                 throw $e;
             }
         }
-        
     }
     function dump($opts = array()) {
         if (! is_null($this->IVF)) {
             $this->IVF->dump();
+        }
+        if (! is_null($this->OBU)) {
+            $this->OBU->dump();
         }
     }
 }
