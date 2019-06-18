@@ -13,6 +13,12 @@ if (is_readable('vendor/autoload.php')) {
 }
 
 class IO_AV1_Bit extends IO_Bit {
+    function get_position() {
+        return $this->getOffset()[0];
+    }
+    function set_position($posi) {
+        return $this->setOffset($posi, 0);
+    }
     function get_f($n) {
         return $this->getUIBits($n);
     }
