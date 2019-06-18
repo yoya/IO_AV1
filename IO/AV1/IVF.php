@@ -46,9 +46,9 @@ class IO_AV1_IVF {
         $this->frames = [];
         for ($i = 0 ; $i < $this->frameNum ; $i++) {
             $frame = [];
-            $frame["size"] = $bit->getUI32LE();
+            $frame["frameSize"] = $bit->getUI32LE();
             $frame["timestamp"] = $bit->getUI64LE();
-            $payload = $bit->getData($frame["size"]);
+            $payload = $bit->getData($frame["frameSize"]);
             $frame["payload"] = $payload;
             try {
                 $obu = new IO_AV1_OBU();
@@ -68,20 +68,20 @@ class IO_AV1_IVF {
     }
     function dump($opts = array()) {
         echo "signature:{$this->signature} version:{$this->version} headerLength:{$this->headerLength}\n";
-        echo "codec:{$this->codec} width:{$this->width} height:{$this->height}\n";
+        echo "codec:{$this->codec} width:{$this->width} height:{$this->height} xo";
         echo "frameRate:{$this->fps}={$this->fpsNum}/{$this->fpsDenom} frameNum:{$this->frameNum}\n";
         if ($this->frameNum != count($this->frames)) {
             $count_frames = count($this->frames);
             fprintf(STDERR, "Error: frameNum:{$this->frameNum} != count(frames):$count_frames\n");
         }
         foreach ($this->frames as $i => $frame) {
-            $size = $frame["size"];
+            $frameSize = $frame["frameSize"];
             $timestamp = $frame["timestamp"];
-            echo "[$i] size:$size time:$timestamp payload:";
-            for ($j = 0 ; $j < min($size, 0x10) ; $j++) {
+            echo "[$i]frameSize:$frameSize time:$timestamp payload:";
+            for ($j = 0 ; $j < min($frameSize, 8) ; $j++) {
                 printf("%02x ", ord($frame["payload"][$j]));
             }
-            echo "\n";
+            echo "...\n";
             if (isset($frame["obu"])) {
                 $frame["obu"]->dump($opts);
             }

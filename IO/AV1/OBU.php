@@ -76,9 +76,13 @@ class IO_AV1_OBU {
             $obu_size = $obu["obu_size"];
             $obu_type = $obu_header["obu_type"];
             $obu_type_name = $this->getOBUTypeName($obu_type);
-            echo "  OBU[$i] obu_type:$obu_type ($obu_type_name) obu_size:$obu_size\n";
+            echo "  [$i]obu_type:$obu_type ($obu_type_name)\n";
             $this->dump_obu_header($obu_header, $opts);
-            
+            if ($obu_header["obu_has_size_field"]) {
+                echo "  obu_size:$obu_size\n";
+            } else {
+                echo "  (obu_size:$obu_size)\n";
+            }
         }
     }
     function dump_obu_header($obu, $opts = array()) {
