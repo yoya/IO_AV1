@@ -13,23 +13,39 @@ if (is_readable('vendor/autoload.php')) {
 }
 
 class IO_AV1_OBU {
+    const OBU_SEQUENCE_HEADER        = 1 ;
+    const OBU_TEMPORAL_DELIMITER     = 2 ;
+    const OBU_FRAME_HEADER           = 3 ;
+    const OBU_TILE_GROUP             = 4 ;
+    const OBU_METADATA               = 5 ;
+    const OBU_FRAME                  = 6 ;
+    const OBU_REDUNDANT_FRAME_HEADER = 7 ;
+    const OBU_TILE_LIST              = 8 ;
+    const OBU_PADDING               = 15 ;
+    static $OBUTypeNameTable = [
+        0  => "Reserved",
+        self::OBU_SEQUENCE_HEADER        => "OBU_SEQUENCE_HEADER",
+        self::OBU_TEMPORAL_DELIMITER     => "OBU_TEMPORAL_DELIMITER",
+        self::OBU_FRAME_HEADER           => "OBU_FRAME_HEADER",
+        self::OBU_TILE_GROUP             => "OBU_TILE_GROUP",
+        self::OBU_METADATA               => "OBU_METADATA",
+        self::OBU_FRAME                  => "OBU_FRAME",
+        self::OBU_REDUNDANT_FRAME_HEADER => "OBU_REDUNDANT_FRAME_HEADER",
+        self::OBU_TILE_LIST              => "OBU_TILE_LIST",
+        9  => "Reserved",
+        10 => "Reserved",
+        11 => "Reserved",
+        12 => "Reserved",
+        13 => "Reserved",
+        14 => "Reserved",
+        self::OBU_PADDING                => "OBU_PADDING"
+    ];
     static function getOBUTypeName($obu_type) {
-        $name = [ 0 => "Reserved",
-                  1 => "OBU_SEQUENCE_HEADER",
-                  2 => "OBU_TEMPORAL_DELIMITER",
-                  3 => "OBU_FRAME_HEADER",
-                  4 => "OBU_TILE_GROUP",
-                  5 => "OBU_METADATA",
-                  6 => "OBU_FRAME",
-                  7 => "OBU_REDUNDANT_FRAME_HEADER",
-                  8 => "OBU_TILE_LIST",
-                  9 => "Reserved",
-                  10 => "Reserved",
-                  11 => "Reserved",
-                  12 => "Reserved",
-                  13 => "Reserved",
-                  14 => "Reserved",
-                  15 => "OBU_PADDING" ][$obu_type];
+        if (isset(self::$OBUTypeNameTable[$obu_type])) {
+            $name = self::$OBUTypeNameTable[$obu_type];
+        } else {
+            $name = "UNKNOWN";
+        }
         return $name;
     }
     function parse($data, $opts = array()) {
