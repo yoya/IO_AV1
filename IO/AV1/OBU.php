@@ -40,6 +40,7 @@ class IO_AV1_OBU {
         14 => "Reserved",
         self::OBU_PADDING                => "OBU_PADDING"
     ];
+    var $OperatingPointIdc = null;
     static function getOBUTypeName($obu_type) {
         if (isset(self::$OBUTypeNameTable[$obu_type])) {
             $name = self::$OBUTypeNameTable[$obu_type];
@@ -48,32 +49,61 @@ class IO_AV1_OBU {
         }
         return $name;
     }
+    /*
+     * parser functions
+     */
     function parse($data, $opts = array()) {
         $this->_data = $data;
         $this->OBUs = [];
+        $temporal_id = 0; // XXX
+        $spatial_id = 0; // XXX
         $bit = new IO_AV1_Bit();
         $bit->input($data);
         while ($bit->hasNextData(1)) {
                 $obu_header = $this->parse_obu_header($bit, $opts);
+                $obu_type           = $obu_header["obu_type"];
+                $obu_extension_flag = $obu_header["obu_extension_flag"];
                 if ($obu_header["obu_has_size_field"]) {
                     $obu_size = $bit->get_leb128();
                 } else {
-                    $obu_size = strlen($data) - 1 - $obu_header["obu_extension_flag"];
+                    $obu_size = strlen($data) - 1 - $obu_extension_flag;
                 }
-                $payload = $bit->getData($obu_size);
-                $obu = ["obu_header" => $obu_header,
-                        "obu_size" => $obu_size,
-                        "payload" => $payload ];
+                if (($obu_type != self::OBU_TEMPORAL_DELIMITER) &&
+                    ($obu_size == 0)) {
+                    throw new Exception("obusize == 0");
+                }
+                $startPosition = $bit->get_position();
+                if ( $obu_type != self::OBU_SEQUENCE_HEADER &&
+                     $obu_type != self::OBU_TEMPORAL_DELIMITER &&
+                     $this->OperatingPointIdc !== 0 &&
+                     $obu_extension_flag == 1 ) {
+                    {
+                        $inTemporalLayer = ($this->OperatingPointIdc >> $temporal_id ) & 1;
+                        $inSpatialLayer = ($this->OperatingPointIdc >> ( $spatial_id + 8 ) ) & 1;
+                    }
+                }
+                $obu_payload = [];
+                $obu = ["obu_header" => $obu_header, "obu_size" => $obu_size];
+                if ( $obu_type == self::OBU_SEQUENCE_HEADER ) {
+                    ;
+                } else if ( $obu_type == self::OBU_TEMPORAL_DELIMITER ) {
+                    ;
+                } else if ( $obu_type == self::OBU_FRAME_HEADER ) {
+                    ;
+                } else if ( $obu_type == self::OBU_REDUNDANT_FRAME_HEADER ) {
+                    ;
+                }
+                $bit->set_position($startPosition + $obu_size);;
                 $this->OBUs []= $obu;
         }
     }
     function parse_obu_header($bit, $opts = array()) {
         $obu_header = [];
-        $obu_header["obu_forbidden_bit"] = $bit->get_f(1);
-        $obu_header["obu_type"] = $bit->get_f(4);
+        $obu_header["obu_forbidden_bit"]  = $bit->get_f(1);
+        $obu_header["obu_type"]           = $bit->get_f(4);
         $obu_header["obu_extension_flag"] = $bit->get_f(1);
         $obu_header["obu_has_size_field"] = $bit->get_f(1);
-        $obu_header["obu_reserved_1bit"] = $bit->get_f(1);
+        $obu_header["obu_reserved_1bit"]  = $bit->get_f(1);
         if ($obu_header["obu_extension_flag"] == 1) {
             $obu_header["obu_extention_header"] = $this->parse_obu_extention_header($bit, $opts);
         }
@@ -81,11 +111,14 @@ class IO_AV1_OBU {
     }
     function parse_obu_extention_header($bit, $opts = array()) {
         $obu_extention_header = [];
-        $obu_extention_header["temporal_id"] = $bit->get_f(3);
-        $obu_extention_header["spatial_id"] = $bit->get_f(2);
+        $obu_extention_header["temporal_id"]    = $bit->get_f(3);
+        $obu_extention_header["spatial_id"]     = $bit->get_f(2);
         $obu_extention_header["reserved_3bits"] = $bit->get_f(3);
         return $obu_extention_header;
     }
+    /*
+     * dumper functions
+     */
     function dump($opts = array()) {
         foreach ($this->OBUs as $i => $obu) {
             $obu_header = $obu["obu_header"];
