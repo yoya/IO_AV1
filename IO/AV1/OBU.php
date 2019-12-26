@@ -1,7 +1,7 @@
 <?php
 
 /*
-  IO_OBU class
+  IO_AV1_OBU class
   (c) 2019/06/18 yoya@awm.jp
   https://aomediacodec.github.io/av1-spec/av1-spec.pdf
  */
