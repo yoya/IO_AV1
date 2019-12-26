@@ -70,8 +70,8 @@ class IO_AV1_IVF {
         echo "signature:{$this->signature} version:{$this->version} headerLength:{$this->headerLength}\n";
         echo "codec:{$this->codec} width:{$this->width} height:{$this->height} xo";
         echo "frameRate:{$this->fps}={$this->fpsNum}/{$this->fpsDenom} frameNum:{$this->frameNum}\n";
-        if ($this->frameNum != count($this->frames)) {
-            $count_frames = count($this->frames);
+        $count_frames = count($this->frames);
+        if ($this->frameNum != $count_frames) {
             fprintf(STDERR, "Error: frameNum:{$this->frameNum} != count(frames):$count_frames\n");
         }
         foreach ($this->frames as $i => $frame) {
