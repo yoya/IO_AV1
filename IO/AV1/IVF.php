@@ -41,7 +41,7 @@ class IO_AV1_IVF {
         $this->fpsNum = $bit->getUI32LE();
         $this->fpsDenom = $bit->getUI32LE();
         $this->fps = $this->fpsNum / $this->fpsDenom;
-        $this->frameNum = $bit->getUI32LE();
+        $this->frameNum = $bit->getUI32LE() + 1;
         $bit->incrementOffset(4, 0);
         $this->frames = [];
         for ($i = 0 ; $i < $this->frameNum ; $i++) {
