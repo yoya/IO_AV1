@@ -1,7 +1,7 @@
 <?php
 
 /*
-  IO_HEVC class
+  IO_AV1_Bit class
   (c) 2019/06/15 yoya@awm.jp
   ref) https://aomediacodec.github.io/av1-spec/av1-spec.pdf
  */
