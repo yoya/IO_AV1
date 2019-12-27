@@ -84,14 +84,18 @@ class IO_AV1_OBU {
                 }
                 $obu_payload = [];
                 $obu = ["obu_header" => $obu_header, "obu_size" => $obu_size];
-                if ( $obu_type == self::OBU_SEQUENCE_HEADER ) {
-                    ;
-                } else if ( $obu_type == self::OBU_TEMPORAL_DELIMITER ) {
-                    ;
-                } else if ( $obu_type == self::OBU_FRAME_HEADER ) {
-                    ;
-                } else if ( $obu_type == self::OBU_REDUNDANT_FRAME_HEADER ) {
-                    ;
+                switch ($obu_type) {
+                case self::OBU_SEQUENCE_HEADER:
+                    $obu["sequence_header_obu"] = $this->parse_sequence_header_obu($bit);
+                    break;
+                case self::OBU_TEMPORAL_DELIMITER:
+                    break;
+                case self::OBU_FRAME_HEADER:
+                    break;
+                case self::OBU_REDUNDANT_FRAME_HEADER:
+                    break;
+                default:
+                    break;
                 }
                 $bit->set_position($startPosition + $obu_size);;
                 $this->OBUs []= $obu;
@@ -116,6 +120,78 @@ class IO_AV1_OBU {
         $obu_extention_header["reserved_3bits"] = $bit->get_f(3);
         return $obu_extention_header;
     }
+    function parse_sequence_header_obu($bit) {
+        $obu = [];
+        $obu["seq_profile"]                  = $bit->get_f(3);
+        $obu["still_picture"]                = $bit->get_f(1);
+        $obu["reduced_still_picture_header"] = $bit->get_f(1);
+        if ($obu["reduced_still_picture_header"]) {
+            $obu["timing_info_present_flag"]            = 0;
+            $obu["decoder_model_info_present_flag"]     = 0;
+            $obu["initial_displany_delay_present_flag"] = 0;
+            $obu["operating_points_cnt_minus_1"]        = 0;
+            $obu["operating_point_idc"] = [0 => 0];
+            $obu["seq_level_idx"] = [0 => $bit->get_f(5)];
+            $obu["seq_tier"] = [0 => 0];
+            $obu["decoder_model_present_for_this_op"] = [0 => 0];
+            $obu["initial_display_delay_present_for_this_op"] = [0 => 0];
+        } else {
+            $obu["timing_info_present_flag"] = $bit->get_f(1);
+            if ($obu["timing_info_present_flag"]) {
+                $obu["timing_info"] = $this->parse_timing_info();
+                $obu["decoder_model_info_present_flag"] = $bit->get_f(1);
+                if ($obu["decoder_model_info_present_flag"]) {
+                    $obu["decoder_model_info"] = $this->parse_decoder_model_info();
+                }
+            } else {
+                $obu["decoder_model_info_present_flag"] = 0;
+            }
+            $obu["initial_display_delay_present_flag"] = $bit->get_f(1);
+            $obu["operating_points_cnt_minus_1"]       = $bit->get_f(5);
+            $obu["operating_point_idc"]                       = [];
+            $obu["seq_level_idx"]                             = [];
+            $obu["seq_tier"]                                  = [];
+            $obu["decoder_model_present_for_this_op"]         = [];
+            $obu["initial_display_delay_present_for_this_op"] = [];
+            $obu["initial_display_delay_minus_1"]             = [];
+            for ($i = 0; $i <= $obu["operating_points_cnt_minus_1"]; $i++) {
+                $obu["operating_point_idc"][$i] = $bit->get_f(12);
+                $obu["seq_level_idx"][$i] = $bit->get_f(5);
+                if ($obu["seq_level_idx"][$i] > 7) {
+                    $obu["seq_tier"][$i] = $bit->get_f(1);
+                } else {
+                    $obu["seq_tier"][$i] = 0;
+                }
+                if ($obu["decoder_model_info_present_flag"]) {
+                    $obu["decoder_model_present_for_this_op"][$i] = $bit->get_f(1);
+                    if ($obu["decoder_model_present_for_this_op"][$i]) {
+                        $obu["operating_paramters_info"] = $this->parse_operating_paramters_info($bit);
+                    }
+                } else {
+                    $obu["decoder_model_present_for_this_op"][$i] = 0;
+                }
+                if ($obu["initial_display_delay_present_flag"]) {
+                    $obu["initial_display_delay_present_for_this_op"][$i] = $bit->get_f(1);
+                    if ($obu["initial_display_delay_present_for_this_op"][$i]) {
+                        $obu["initial_display_delay_minus_1"][$i] = $bit->get_f(4);
+                    }
+                }
+            }
+        }
+        return $obu;
+    }
+    function parse_timing_info($bit) {
+        $info = [];
+        throw "ERROR: parse_timing_info: not implemented yet\n";
+    }
+    function parse_decoder_model_info($bit) {
+        $info = [];
+        throw "ERROR: parse_decoder_model_info: not implemented yet\n";
+    }
+    function parse_operating_paramters_info($bit) {
+        $info = [];
+        throw "ERROR: parse_operating_parameters_info: not implemented yet\n";
+    }
     /*
      * dumper functions
      */
@@ -132,6 +208,19 @@ class IO_AV1_OBU {
                 echo "  (obu_size:$obu_size)\n";
             }
             $this->dump_obu_header($obu_header, $opts);
+            switch ($obu_type) {
+            case self::OBU_SEQUENCE_HEADER:
+                $this->dump_sequence_header_obu($obu["sequence_header_obu"], $opts);
+                break;
+            case self::OBU_TEMPORAL_DELIMITER:
+                break;
+            case self::OBU_FRAME_HEADER:
+                break;
+            case self::OBU_REDUNDANT_FRAME_HEADER:
+                break;
+            default:
+                break;
+            }
         }
     }
     function dump_obu_header($obu, $opts = array()) {
@@ -142,13 +231,73 @@ class IO_AV1_OBU {
         echo "    obu_has_size_field:{$obu['obu_has_size_field']} ";
         echo "obu_reserved_1bit:{$obu['obu_reserved_1bit']}\n";
         if ($obu["obu_extension_flag"] == 1) {
-            $this->parse_obu_extention_header($obu["obu_extention_header"], $opts);
+            $this->dump_obu_extention_header($obu["obu_extention_header"], $opts);
         }
     }
     function dump_obu_extention_header($obu, $opts = array()) {
-        echo "obu_extention_header:\n";
-        echo "    temporal_id:{$obu['temporal_id']} ";
+        echo "    obu_extention_header:\n";
+        echo "      temporal_id:{$obu['temporal_id']} ";
         echo "spatial_id:{$obu['spatial_id']} ";
         echo "reserved_3bits:{$obu['reserved_3bits']}\n";
+    }
+    function dump_sequence_header_obu($obu, $opts = array()) {
+        echo "  sequence_header_obu:\n";
+        echo "    seq_profile:{$obu['seq_profile']} ";
+        echo "still_picture:{$obu['still_picture']} ";
+        echo "reduced_still_picture_header:{$obu['reduced_still_picture_header']}\n";
+        echo "    reduced_still_picture_header:{$obu['reduced_still_picture_header']}\n";
+        if ($obu["reduced_still_picture_header"]) {
+            echo "      timing_info_present_flag:{$obu['timing_info_present_flag']}\n";
+            echo " decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']}";
+            echo " initial_displany_delay_present_flag:{$obu['initial_displany_delay_present_flag']}";
+            echo " operating_points_cnt_minus_1:{$obu['operating_points_cnt_minus_1']}";
+            echo " operating_point_idc[0]:{$obu['operating_point_idc'][0]}";
+            echo " seq_level_idx[0]:{$obu['seq_level_idx'][0]}";
+            echo " seq_tier[0]:{$obu['seq_tier'][0]}";
+            echo " decoder_model_present_for_this_op[0]:{$obu['decoder_model_present_for_this_op'][0]}";
+            echo " initial_display_delay_present_for_this_op[0]:{$obu['initial_display_delay_present_for_this_op'][0]}";
+        } else {
+            echo "      timing_info_present_flag:{$obu['timing_info_present_flag']}\n";
+            if ($obu["timing_info_present_flag"]) {
+                $this->dump_timing_info($obu["timing_info"], $opts);
+                echo "        decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']}\n";
+                if ($obu["decoder_model_info_present_flag"]) {
+                    $this->dump_decoder_model_info($obu["decoder_model_info"], $opts);
+                    ;
+                }
+            } else {
+                echo "        decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']}\n";
+            }
+            echo "      initial_display_delay_present_flag:{$obu['initial_display_delay_present_flag']}\n";
+            echo "      operating_points_cnt_minus_1:{$obu['operating_points_cnt_minus_1']}\n";
+            for ($i = 0; $i <= $obu["operating_points_cnt_minus_1"]; $i++) {
+                echo "      operating_point_idc_$i:{$obu['operating_point_idc'][$i]}\n";
+                echo "      seq_level_idx_$i:{$obu['seq_level_idx'][$i]}\n";
+                echo "      seq_tier_$i:{$obu['seq_tier'][$i]}\n";
+                echo "      decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']}\n";
+                if ($obu["decoder_model_info_present_flag"]) {
+                    echo "        decoder_model_present_for_this_op_$i:{$obu["decoder_model_present_for_this_op"][$i]}\n";
+                    echo "        decoder_model_present_for_this_op_$i:{$obu['decoder_model_present_for_this_op'][$i]}\n";
+                    if ($obu["decoder_model_present_for_this_op"][$i]) {
+                        $this->dump_operating_paramters_info($obu["operating_paramters_info"], $opts);
+                    }
+                } else {
+                    echo "      decoder_model_present_for_this_op_$i:{$obu['decoder_model_present_for_this_op'][$i]}\n";
+                }
+                echo "    initial_display_delay_present_flag:{$obu['initial_display_delay_present_flag']}\n";
+                if ($obu["initial_display_delay_present_flag"]) {
+                    echo "      initial_display_delay_minus_1_$i:{$obu['initial_display_delay_minus_1'][$i]}\n";
+                }
+            }
+        }
+    }
+    function dump_timing_info($info, $opts) {
+        echo "WARN: dump_timing_info not implemented yet.\n";
+    }
+    function dump_decoder_model_info($info, $opts) {
+        echo "WARN: dump_decoder_model_info not implemented yet.\n";
+    }
+    function dump_operating_paramters_info($info, $opts) {
+        echo "WARN: dump_operating_paramters_info not implemented yet.\n";
     }
 }
