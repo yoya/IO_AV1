@@ -733,7 +733,7 @@ class IO_AV1_OBU {
             if ($config["subsampling_x"] && $config["subsampling_y"]) {
                 $csp = $config["chroma_sample_position"];
                 $csp_name = $this->getCSPName($csp);
-                echo "        chroma_sample_position:$csp($csp_name)";
+                echo "        chroma_sample_position:$csp($csp_name)\n";
             }
         }
         echo "      separate_uv_delta_q:{$config['separate_uv_delta_q']}\n";
