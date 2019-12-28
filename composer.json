@@ -1,0 +1,21 @@
+{
+    "name": "yoya/io_av1",
+    "type": "library",
+    "description": "AV1 library",
+    "keywords": ["av1", "video"],
+    "homepage": "http://pwiki.awm.jp/~yoya/?IO_AV1",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "yoya",
+            "email": "yoya@awm.jp"
+        }
+    ],
+    "require": {
+        "php": ">=5.1.0",
+        "yoya/io_bit": "^2.4.3",
+    },
+    "autoload": {
+        "psr-0": { "IO_AV1": "." }
+    }
+}
