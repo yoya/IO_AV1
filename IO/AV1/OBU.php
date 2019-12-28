@@ -128,7 +128,7 @@ class IO_AV1_OBU {
         if ($obu["reduced_still_picture_header"]) {
             $obu["timing_info_present_flag"]            = 0;
             $obu["decoder_model_info_present_flag"]     = 0;
-            $obu["initial_displany_delay_present_flag"] = 0;
+            $obu["initial_display_delay_present_flag"] = 0;
             $obu["operating_points_cnt_minus_1"]        = 0;
             $obu["operating_point_idc"] = [0 => 0];
             $obu["seq_level_idx"] = [0 => $bit->get_f(5)];
@@ -249,7 +249,7 @@ class IO_AV1_OBU {
         if ($obu["reduced_still_picture_header"]) {
             echo "      timing_info_present_flag:{$obu['timing_info_present_flag']}\n";
             echo " decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']}";
-            echo " initial_displany_delay_present_flag:{$obu['initial_displany_delay_present_flag']}";
+            echo " initial_display_delay_present_flag:{$obu['initial_display_delay_present_flag']}";
             echo " operating_points_cnt_minus_1:{$obu['operating_points_cnt_minus_1']}";
             echo " operating_point_idc[0]:{$obu['operating_point_idc'][0]}";
             echo " seq_level_idx[0]:{$obu['seq_level_idx'][0]}";
