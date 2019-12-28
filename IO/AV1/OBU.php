@@ -539,15 +539,15 @@ class IO_AV1_OBU {
         echo "reduced_still_picture_header:{$obu['reduced_still_picture_header']}\n";
         echo "    reduced_still_picture_header:{$obu['reduced_still_picture_header']}\n";
         if ($obu["reduced_still_picture_header"]) {
-            echo "      timing_info_present_flag:{$obu['timing_info_present_flag']}\n";
-            echo " decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']}";
-            echo " initial_display_delay_present_flag:{$obu['initial_display_delay_present_flag']}";
-            echo " operating_points_cnt_minus_1:{$obu['operating_points_cnt_minus_1']}";
-            echo " operating_point_idc[0]:{$obu['operating_point_idc'][0]}";
-            echo " seq_level_idx[0]:{$obu['seq_level_idx'][0]}";
-            echo " seq_tier[0]:{$obu['seq_tier'][0]}";
-            echo " decoder_model_present_for_this_op[0]:{$obu['decoder_model_present_for_this_op'][0]}";
-            echo " initial_display_delay_present_for_this_op[0]:{$obu['initial_display_delay_present_for_this_op'][0]}";
+            echo "      (timing_info_present_flag:{$obu['timing_info_present_flag']})\n";
+            echo " (decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']})";
+            echo " (initial_display_delay_present_flag:{$obu['initial_display_delay_present_flag']})";
+            echo " (operating_points_cnt_minus_1:{$obu['operating_points_cnt_minus_1']})";
+            echo " (operating_point_idc[0]:{$obu['operating_point_idc'][0]})";
+            echo " (seq_level_idx[0]:{$obu['seq_level_idx'][0]})";
+            echo " (seq_tier[0]:{$obu['seq_tier'][0]})";
+            echo " (decoder_model_present_for_this_op[0]:{$obu['decoder_model_present_for_this_op'][0]})";
+            echo " (initial_display_delay_present_for_this_op[0]:{$obu['initial_display_delay_present_for_this_op'][0]})";
         } else {
             echo "      timing_info_present_flag:{$obu['timing_info_present_flag']}\n";
             if ($obu["timing_info_present_flag"]) {
@@ -555,30 +555,32 @@ class IO_AV1_OBU {
                 echo "        decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']}\n";
                 if ($obu["decoder_model_info_present_flag"]) {
                     $this->dump_decoder_model_info($obu["decoder_model_info"], $opts);
-                    ;
                 }
             } else {
-                echo "        decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']}\n";
+                echo "        (decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']})\n";
             }
             echo "      initial_display_delay_present_flag:{$obu['initial_display_delay_present_flag']}\n";
             echo "      operating_points_cnt_minus_1:{$obu['operating_points_cnt_minus_1']}\n";
             for ($i = 0; $i <= $obu["operating_points_cnt_minus_1"]; $i++) {
                 echo "      operating_point_idc_$i:{$obu['operating_point_idc'][$i]}\n";
                 echo "      seq_level_idx_$i:{$obu['seq_level_idx'][$i]}\n";
-                echo "      seq_tier_$i:{$obu['seq_tier'][$i]}\n";
+                if ($obu["seq_level_idx"][$i] > 7) {
+                    echo "      seq_tier_$i:{$obu['seq_tier'][$i]}\n";
+                } else {
+                    echo "      (seq_tier_$i:{$obu['seq_tier'][$i]})\n";
+                }
                 echo "      decoder_model_info_present_flag:{$obu['decoder_model_info_present_flag']}\n";
                 if ($obu["decoder_model_info_present_flag"]) {
                     echo "        decoder_model_present_for_this_op_$i:{$obu["decoder_model_present_for_this_op"][$i]}\n";
-                    echo "        decoder_model_present_for_this_op_$i:{$obu['decoder_model_present_for_this_op'][$i]}\n";
                     if ($obu["decoder_model_present_for_this_op"][$i]) {
                         $this->dump_operating_paramters_info($obu["operating_paramters_info"], $opts);
                     }
                 } else {
-                    echo "      decoder_model_present_for_this_op_$i:{$obu['decoder_model_present_for_this_op'][$i]}\n";
+                    echo "      (decoder_model_present_for_this_op_$i:{$obu['decoder_model_present_for_this_op'][$i]})\n";
                 }
-                echo "    initial_display_delay_present_flag:{$obu['initial_display_delay_present_flag']}\n";
+                echo "      initial_display_delay_present_flag:{$obu['initial_display_delay_present_flag']}\n";
                 if ($obu["initial_display_delay_present_flag"]) {
-                    echo "      initial_display_delay_minus_1_$i:{$obu['initial_display_delay_minus_1'][$i]}\n";
+                    echo "        initial_display_delay_minus_1_$i:{$obu['initial_display_delay_minus_1'][$i]}\n";
                 }
             }
         }
@@ -587,7 +589,11 @@ class IO_AV1_OBU {
         echo " frame_height_bits_minus_1:{$obu['frame_height_bits_minus_1']}\n";
         echo "    frame_width_minus_1:{$obu['frame_width_minus_1']}";
         echo " frame_height_minus_1:{$obu['frame_height_minus_1']}\n";
-        echo "    frame_id_numbers_present_flag:{$obu['frame_id_numbers_present_flag']}\n";
+        if ($obu["reduced_still_picture_header"]) {
+            echo "        (frame_id_numbers_present_flag:{$obu['frame_id_numbers_present_flag']})\n";
+        } else {
+            echo "        frame_id_numbers_present_flag:{$obu['frame_id_numbers_present_flag']}\n";
+        }
         if ($obu["frame_id_numbers_present_flag"]) {
             echo "      delta_frame_id_length_minus_2:{$obu['delta_frame_id_length_minus_2']}";
             echo " additional_frame_id_length_minus_1:{$obu['additional_frame_id_length_minus_1']}\n";
@@ -596,16 +602,16 @@ class IO_AV1_OBU {
         echo " enable_filter_intra:{$obu['enable_filter_intra']}";
         echo " enable_intra_edge_filter:{$obu['enable_intra_edge_filter']}\n";
         if ($obu["reduced_still_picture_header"]) {
-            echo "      enable_interintra_compound:{$obu['enable_interintra_compound']}";
-            echo " enable_masked_compound:{$obu['enable_masked_compound']}\n";
-            echo "      enable_warped_motion:{$obu['enable_warped_motion']}";
-            echo " enable_dual_filter:{$obu['enable_dual_filter']}\n";
-            echo "      enable_order_hint:{$obu['enable_order_hint']}\n";
-            echo "      enable_jnt_comp:{$obu['enable_jnt_comp']}";
-            echo " enable_ref_frame_mvs:{$obu['enable_ref_frame_mvs']}\n";
-            echo "      seq_force_screen_content_tools:{$obu['seq_force_screen_content_tools']}(SELECT_SCREEN_CONTENT_TOOLS)\n";
-            echo "      seq_force_integer_mv:{$obu['seq_force_integer_mv']}(SELECT_INTEGER_MV)\n";
-            echo "      OrderHintBits:{$this->OrderHintBits}\n";
+            echo "      (enable_interintra_compound:{$obu['enable_interintra_compound']})";
+            echo " (enable_masked_compound:{$obu['enable_masked_compound']})\n";
+            echo "      (enable_warped_motion:{$obu['enable_warped_motion']})";
+            echo " (enable_dual_filter:{$obu['enable_dual_filter']})\n";
+            echo "      (enable_order_hint:{$obu['enable_order_hint']})\n";
+            echo "      (enable_jnt_comp:{$obu['enable_jnt_comp']})";
+            echo " (enable_ref_frame_mvs:{$obu['enable_ref_frame_mvs']})\n";
+            echo "      (seq_force_screen_content_tools:{$obu['seq_force_screen_content_tools']}(SELECT_SCREEN_CONTENT_TOOLS))\n";
+            echo "      (seq_force_integer_mv:{$obu['seq_force_integer_mv']}(SELECT_INTEGER_MV))\n";
+            echo "      (OrderHintBits:{$this->OrderHintBits})\n";
         } else {
             echo "      enable_interintra_compound:{$obu['enable_interintra_compound']}";
             echo " enable_masked_compound:{$obu['enable_masked_compound']}\n";
@@ -621,25 +627,25 @@ class IO_AV1_OBU {
             }
             echo "      seq_choose_screen_content_tools:{$obu['seq_choose_screen_content_tools']}\n";
             if ($obu["seq_choose_screen_content_tools"]) {
-                echo "        seq_force_screen_content_tools:{$obu['seq_force_screen_content_tools']}(SELECT_SCREEN_CONTENT_TOOLS)\n";
+                echo "        (seq_force_screen_content_tools:{$obu['seq_force_screen_content_tools']}(SELECT_SCREEN_CONTENT_TOOLS))\n";
             } else {
                 echo "        seq_force_screen_content_tools:{$obu['seq_force_screen_content_tools']}\n";
             }
             if ($obu["seq_force_screen_content_tools"] > 0) {
                 echo "        seq_choose_integer_mv:{$obu['seq_choose_integer_mv']}\n";
                 if ($obu["seq_choose_integer_mv"]) {
-                    echo "          seq_force_integer_mv:{$obu['seq_force_integer_mv']}(SELECT_INTEGER_MV)\n";
+                    echo "          (seq_force_integer_mv:{$obu['seq_force_integer_mv']}(SELECT_INTEGER_MV))\n";
                 } else {
                     echo "          seq_force_integer_mv:{$obu['seq_force_integer_mv']}\n";
                 }
             } else {
-                echo "          seq_force_integer_mv:{$obu['seq_force_integer_mv']}(SELECT_INTEGER_MV)\n";
+                echo "          (seq_force_integer_mv:{$obu['seq_force_integer_mv']}(SELECT_INTEGER_MV))\n";
             }
             if ($obu["enable_order_hint"]) {
                 echo "          order_hint_bits_minus_1:{$obu['order_hint_bits_minus_1']}";
                 echo " OrderHintBits:{$this->OrderHintBits}\n";
             } else {
-                echo "          OrderHintBits:{$this->OrderHintBits}\n";
+                echo "          (OrderHintBits:{$this->OrderHintBits})\n";
             }
         }
         echo "    enable_superres:{$obu['enable_superres']}";
@@ -658,7 +664,7 @@ class IO_AV1_OBU {
         echo "WARN: dump_operating_paramters_info not implemented yet.\n";
     }
     function dump_color_config($config, $obu, $opts) {
-        echo "    color_config()\n";
+        echo "    color_config:\n";
         echo "      high_bitdepth:{$config['high_bitdepth']}\n";
         if (($obu["seq_profile"] == 2) && $config["high_bitdepth"]) {
             echo "        twelve_bit:{$config['twelve_bit']}\n";
@@ -669,58 +675,65 @@ class IO_AV1_OBU {
             throw new Exception("must be seq_profile:{$obu['seq_profile']}) <= 2) {");            
         }
         if ($obu["seq_profile"] == 1) {
-            echo "        mono_chrome:{$config['mono_chrome']}\n";
+            echo "        (mono_chrome:{$config['mono_chrome']}\n";
         } else {
             echo "        mono_chrome:{$config['mono_chrome']}\n";
         }
         echo "      NumPlanes:{$this->NumPlanes}\n";
         echo "      color_description_present_flag:{$config['color_description_present_flag']}\n";
         if ($config["color_description_present_flag"]) {
-            echo "        color_primaries:{$config['color_primaries']}\n";
-            echo "        transfer_characteristics:{$config['transfer_characteristics']}\n";
-            echo "        matrix_coefficients:{$config['matrix_coefficients']}\n";
+            $cp = $config["color_primaries"];
+            $cp_name = $this->getCPName($cp);
+            $tc = $config["transfer_characteristics"];
+            $tc_name = $this->getTCName($tc);
+            $mc = $config["matrix_coefficients"];
+            $mc_name = $this->getMCName($mc);
+            echo "        color_primaries:$cp($cp_name)\n";
+            echo "        transfer_characteristics:$tc($tc_name)\n";
+            echo "        matrix_coefficients:$mc($mc_name)\n";
         } else {
-            echo "        color_primaries:{$config['color_primaries']}\n";
-            echo "        transfer_characteristics:{$config['transfer_characteristics']}\n";
-            echo "        matrix_coefficients:{$config['matrix_coefficients']}\n";
+            echo "        (color_primaries:{$config['color_primaries']}(CP_UNSPECIFIED))\n";
+            echo "        (transfer_characteristics:{$config['transfer_characteristics']}(TC_UNSPECIFIED))\n";
+            echo "        (matrix_coefficients:{$config['matrix_coefficients']}(MC_UNSPECIFIED))\n";
         }
         if ($config["mono_chrome"]) {
             echo "        color_range:{$config['color_range']}\n";
-            echo "        subsampling_x:{$config['subsampling_x']}";
-            echo " subsampling_y:{$config['subsampling_y']}\n";
-            echo "        chroma_sampling_position:{$config['chroma_sampling_position']}(CSP_UNKNOWN)";
-            echo " separate_uv_delta_q:{$config['separate_uv_delta_q']}\n";
+            echo "        (subsampling_x:{$config['subsampling_x']})";
+            echo " (subsampling_y:{$config['subsampling_y']})\n";
+            echo "        (chroma_sampling_position:{$config['chroma_sampling_position']}(CSP_UNKNOWN))";
+            echo " (separate_uv_delta_q:{$config['separate_uv_delta_q']})\n";
             return ;
         } else if (($config["color_primaries"] == self::CP_BT_709) &&
                    ($config["transfer_characteristics"] == self::TC_SRGB) &&
                    ($config["matrix_coefficients"] == self::MC_IDENTITY)) {
-            echo "        color_range:{$config['color_range']}\n";
-            echo "        subsampling_x:{$config['subsampling_x']}";
-            echo " subsampling_y:{$config['subsampling_y']}\n";
+            echo "        (color_range:{$config['color_range']})\n";
+            echo "        (subsampling_x:{$config['subsampling_x']})";
+            echo " (subsampling_y:{$config['subsampling_y']})\n";
         } else {
             echo "        color_range:{$config['color_range']}\n";
             if ($obu["seq_profile"] == 0) {
-                echo "          subsampling_x:{$config['subsampling_x']}";
-                echo " subsampling_y:{$config['subsampling_y']}\n";
-                
+                echo "          (subsampling_x:{$config['subsampling_x']})";
+                echo " (subsampling_y:{$config['subsampling_y']})\n";
             } else if ($obu["seq_profile"] == 1) {
-                echo "          subsampling_x:{$config['subsampling_x']}";
-                echo " subsampling_y:{$config['subsampling_y']}\n";
+                echo "          (subsampling_x:{$config['subsampling_x']})";
+                echo " (subsampling_y:{$config['subsampling_y']})\n";
             } else {
                 if ($this->BitDepth == 12) {
                     echo "          subsampling_x:{$config['subsampling_x']}\n";
                     if ($config["subsampling_x"]) {
                         echo "            subsampling_y:{$config['subsampling_y']}\n";
                     } else {
-                        echo "            subsampling_y:{$config['subsampling_y']}\n";
+                        echo "            (subsampling_y:{$config['subsampling_y']})\n";
                     }
                 } else {
-                    echo "            subsampling_x:{$config['subsampling_x']}";
-                    echo " subsampling_y:{$config['subsampling_y']}\n";
+                    echo "            (subsampling_x:{$config['subsampling_x']})";
+                    echo " (subsampling_y:{$config['subsampling_y']})\n";
                 }
             }
             if ($config["subsampling_x"] && $config["subsampling_y"]) {
-                echo "        chroma_sample_position:{$config['chroma_sample_position']}\n";
+                $csp = $config["chroma_sample_position"];
+                $csp_name = $this->getCSPName($csp);
+                echo "        chroma_sample_position:$csp($csp_name)";
             }
         }
         echo "      separate_uv_delta_q:{$config['separate_uv_delta_q']}\n";
