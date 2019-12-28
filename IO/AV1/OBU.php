@@ -43,9 +43,22 @@ class IO_AV1_OBU {
     // 3. Symbols
     const SELECT_SCREEN_CONTENT_TOOLS = 2;
     const SELECT_INTEGER_MV           = 2;
+    // 6.4.2 Color config semantic
+    const CP_BT_709      = 1;
+    const CP_UNSPECIFIED = 2;
+    //
+    const TC_UNSPECIFIED = 2;
+    const TC_SRGB        = 13;
+    //
+    const MC_IDENTITY    = 0;
+    const MC_UNSPECIFIED = 2;
+    //
+    const CSP_UNKNOWN = 0;
     //
     var $OperatingPointIdc = null;
     var $OrderHintBits = null;
+    var $BitDepth = null;
+    var $NumPlanes = null;
     function choose_operating_point() {
         return 0; // XXX
     }
@@ -254,6 +267,8 @@ class IO_AV1_OBU {
         $obu["enable_superres"] = $bit->get_f(1);
         $obu["enable_cdef"] = $bit->get_f(1);
         $obu["enable_restoration"] = $bit->get_f(1);
+        $obu["color_config"] = $this->parse_color_config($bit, $obu);
+        $obu["film_grain_params_present"] = $bit->get_f(1);
         return $obu;
     }
     function parse_timing_info($bit) {
@@ -267,6 +282,74 @@ class IO_AV1_OBU {
     function parse_operating_paramters_info($bit) {
         $info = [];
         throw "ERROR: parse_operating_parameters_info: not implemented yet\n";
+    }
+    function parse_color_config($bit, $obu) {
+        $config = [];
+        $config["high_bitdepth"] = $bit->get_f(1);
+        if (($obu["seq_profile"] == 2) && $config["high_bitdepth"]) {
+            $config["twelve_bit"] = $bit->get_f(1);
+            $this->BitDepth = ($config["twelve_bit"]) ? 12: 10;
+        } else if ($obu["seq_profile"] <= 2) {
+            $this->BitDepth = ($config["high_bitdepth"]) ? 10: 8;
+        } else {
+            throw new Exception("must be seq_profile:{$obu['seq_profile']} <= 2)");
+        }
+        if ($obu["seq_profile"] == 1) {
+            $config["mono_chrome"] = 0;
+        } else {
+            $config["mono_chrome"] = $bit->get_f(1);
+        }
+        $this->NumPlanes = $config["mono_chrome"]? 1: 3;
+        $config["color_description_present_flag"] = $bit->get_f(1);
+        if ($config["color_description_present_flag"]) {
+            $config["color_primaries"]           = $bit->get_f(8);
+            $config["transfer_characteristics"] = $bit->get_f(8);
+            $config["matrix_coefficients"]      = $bit->get_f(8);
+        } else {
+            $config["color_primaries"]          = self::CP_UNSPECIFIED;
+            $config["transfer_characteristics"] = self::TC_UNSPECIFIED;
+            $config["matrix_coefficients"]      = self::MC_UNSPECIFIED;
+        }
+        if ($config["mono_chrome"]) {
+            $config["color_range"] = $bit->get_f(1);
+            $config["subsampling_x"] = 1;
+            $config["subsampling_y"] = 1;
+            $config["chroma_sampling_position"] = self::CSP_UNKNOWN;
+            $config["separate_uv_delta_q"] = 0;
+            return $config;
+        } else if (($config["color_primaries"] == self::CP_BT_709) &&
+                   ($config["transfer_characteristics"] == self::TC_SRGB) &&
+                   ($config["matrix_coefficients"] == self::MC_IDENTITY)) {
+            $config["color_range"] = 1;
+            $config["subsampling_x"] = 0;
+            $config["subsampling_y"] = 0;
+        } else {
+            $config["color_range"] = $bit->get_f(1);
+            if ($obu["seq_profile"] == 0) {
+                $config["subsampling_x"] = 1;
+                $config["subsampling_y"] = 1;
+            } else if ($obu["seq_profile"] == 1) {
+                $config["subsampling_x"] = 0;
+                $config["subsampling_y"] = 0;
+            } else {
+                if ($this->BitDepth == 12) {
+                    $config["subsampling_x"] = $bit->get_f(1);
+                    if ($config["subsampling_x"]) {
+                        $config["subsampling_y"] = $bit->get_f(1);
+                    } else {
+                        $config["subsampling_y"] = 0;
+                    }
+                }  else {
+                    $config["subsampling_x"] = 1;
+                    $config["subsampling_y"] = 0;
+                }
+            }
+            if ($config["subsampling_x"] && $config["subsampling_y"]) {
+                $config["chroma_sample_position"] = $bit->get_f(2);
+            }
+        }
+        $config["separate_uv_delta_q"] = $bit->get_f(1);
+        return $config;
     }
     /*
      * dumper functions
@@ -427,9 +510,10 @@ class IO_AV1_OBU {
             }
         }
         echo "    enable_superres:{$obu['enable_superres']}";
-        echo " enable_cdef:{$obu['enable_cdef']}\n";
+        echo " enable_cdef:{$obu['enable_cdef']}";
         echo " enable_restoration:{$obu['enable_restoration']}\n";
-        
+        $this->dump_color_config($obu["color_config"], $obu, $opts);
+        echo "    film_grain_params_present:{$obu['film_grain_params_present']}\n";
     }
     function dump_timing_info($info, $opts) {
         echo "WARN: dump_timing_info not implemented yet.\n";
@@ -439,5 +523,73 @@ class IO_AV1_OBU {
     }
     function dump_operating_paramters_info($info, $opts) {
         echo "WARN: dump_operating_paramters_info not implemented yet.\n";
+    }
+    function dump_color_config($config, $obu, $opts) {
+        echo "    color_config()\n";
+        echo "      high_bitdepth:{$config['high_bitdepth']}\n";
+        if (($obu["seq_profile"] == 2) && $config["high_bitdepth"]) {
+            echo "        twelve_bit:{$config['twelve_bit']}\n";
+            echo "        BitDepth:{$this->BitDepth}\n";
+        } else if ($obu["seq_profile"] <= 2) {
+            echo "        BitDepth:{$this->BitDepth}\n";
+        } else {
+            throw new Exception("must be seq_profile:{$obu['seq_profile']}) <= 2) {");            
+        }
+        if ($obu["seq_profile"] == 1) {
+            echo "        mono_chrome:{$config['mono_chrome']}\n";
+        } else {
+            echo "        mono_chrome:{$config['mono_chrome']}\n";
+        }
+        echo "      NumPlanes:{$this->NumPlanes}\n";
+        echo "      color_description_present_flag:{$config['color_description_present_flag']}\n";
+        if ($config["color_description_present_flag"]) {
+            echo "        color_primaries:{$config['color_primaries']}\n";
+            echo "        transfer_characteristics:{$config['transfer_characteristics']}\n";
+            echo "        matrix_coefficients:{$config['matrix_coefficients']}\n";
+        } else {
+            echo "        color_primaries:{$config['color_primaries']}\n";
+            echo "        transfer_characteristics:{$config['transfer_characteristics']}\n";
+            echo "        matrix_coefficients:{$config['matrix_coefficients']}\n";
+        }
+        if ($config["mono_chrome"]) {
+            echo "        color_range:{$config['color_range']}\n";
+            echo "        subsampling_x:{$config['subsampling_x']}";
+            echo " subsampling_y:{$config['subsampling_y']}\n";
+            echo "        chroma_sampling_position:{$config['chroma_sampling_position']}(CSP_UNKNOWN)";
+            echo " separate_uv_delta_q:{$config['separate_uv_delta_q']}\n";
+            return ;
+        } else if (($config["color_primaries"] == self::CP_BT_709) &&
+                   ($config["transfer_characteristics"] == self::TC_SRGB) &&
+                   ($config["matrix_coefficients"] == self::MC_IDENTITY)) {
+            echo "        color_range:{$config['color_range']}\n";
+            echo "        subsampling_x:{$config['subsampling_x']}";
+            echo " subsampling_y:{$config['subsampling_y']}\n";
+        } else {
+            echo "        color_range:{$config['color_range']}\n";
+            if ($obu["seq_profile"] == 0) {
+                echo "          subsampling_x:{$config['subsampling_x']}";
+                echo " subsampling_y:{$config['subsampling_y']}\n";
+                
+            } else if ($obu["seq_profile"] == 1) {
+                echo "          subsampling_x:{$config['subsampling_x']}";
+                echo " subsampling_y:{$config['subsampling_y']}\n";
+            } else {
+                if ($this->BitDepth == 12) {
+                    echo "          subsampling_x:{$config['subsampling_x']}\n";
+                    if ($config["subsampling_x"]) {
+                        echo "            subsampling_y:{$config['subsampling_y']}\n";
+                    } else {
+                        echo "            subsampling_y:{$config['subsampling_y']}\n";
+                    }
+                } else {
+                    echo "            subsampling_x:{$config['subsampling_x']}";
+                    echo " subsampling_y:{$config['subsampling_y']}\n";
+                }
+            }
+            if ($config["subsampling_x"] && $config["subsampling_y"]) {
+                echo "        chroma_sample_position:{$config['chroma_sample_position']}\n";
+            }
+        }
+        echo "      separate_uv_delta_q:{$config['separate_uv_delta_q']}\n";
     }
 }
