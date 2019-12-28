@@ -44,16 +44,117 @@ class IO_AV1_OBU {
     const SELECT_SCREEN_CONTENT_TOOLS = 2;
     const SELECT_INTEGER_MV           = 2;
     // 6.4.2 Color config semantic
-    const CP_BT_709      = 1;
-    const CP_UNSPECIFIED = 2;
+    const CP_BT_709       = 1;
+    const CP_UNSPECIFIED  = 2;
+    const CP_BT_470_M     = 4;
+    const CP_BT_470_B_G   = 5;
+    const CP_BT_601       = 6;
+    const CP_SMPTE_240    = 7;
+    const CP_GENERIC_FILM = 8;
+    const CP_BT_2020      = 9;
+    const CP_XYZ          = 10;
+    const CP_SMPTE_431    = 11;
+    const CP_SMPTE_432    = 12;
+    const CP_EBU_3213     = 22;
+    static $CPNameTable = [
+        self::CP_BT_709       => "BT_709",
+        self::CP_UNSPECIFIED  => "CP_UNSPECIFIED",
+        self::CP_BT_470_M     => "CP_BT_470_M",
+        self::CP_BT_470_B_G   => "CP_BT_470_B_G",
+        self::CP_BT_601       => "CP_BT_601",
+        self::CP_SMPTE_240    => "CP_SMPTE_240",
+        self::CP_GENERIC_FILM => "CP_GENERIC_FILM",
+        self::CP_BT_2020      => "CP_BT_2020",
+        self::CP_XYZ          => "CP_XYZ",
+        self::CP_SMPTE_431    => "CP_SMPTE_431",
+        self::CP_SMPTE_432    => "CP_SMPTE_432",
+        self::CP_EBU_3213     => "CP_EBU_3213 ",
+    ];
     //
-    const TC_UNSPECIFIED = 2;
-    const TC_SRGB        = 13;
+    const TC_RESERVED_0     = 0;
+    const TC_BT_709         = 1;
+    const TC_UNSPECIFIED    = 2;
+    const TC_RESERVED_3     = 3;
+    const TC_BT_470_M       = 4;
+    const TC_BT_470_B_G     = 5;
+    const TC_BT_601         = 6;
+    const TC_SMPTE_240      = 7;
+    const TC_LINEAR         = 8;
+    const TC_LOG_100        = 9;
+    const TC_LOG_100_SQRT10 = 10;
+    const TC_IEC_61966      = 11;
+    const TC_BT_1361        = 12;
+    const TC_SRGB           = 13;
+    const TC_BT_2020_10BIT  = 14;
+    const TC_BT_2020_12BIT  = 15;
+    const TC_SMPTE_2084     = 16;
+    const TC_SMPTE_428      = 17;
+    const TC_HLG            = 18;
+    static $TCNameTable = [
+        self::TC_RESERVED_0     => "TC_RESERVED_0",
+        self::TC_BT_709         => "TC_BT_709",
+        self::TC_UNSPECIFIED    => "TC_UNSPECIFIED",
+        self::TC_RESERVED_3     => "TC_RESERVED_3",
+        self::TC_BT_470_M       => "TC_BT_470_M",
+        self::TC_BT_470_B_G     => "TC_BT_470_B_G",
+        self::TC_BT_601         => "TC_BT_601",
+        self::TC_SMPTE_240      => "TC_SMPTE_240",
+        self::TC_LINEAR         => "TC_LINEAR",
+        self::TC_LOG_100        => "TC_LOG_100",
+        self::TC_LOG_100_SQRT10 => "TC_LOG_100_SQRT10",
+        self::TC_IEC_61966      => "TC_IEC_61966",
+        self::TC_BT_1361        => "TC_BT_1361",
+        self::TC_SRGB           => "TC_SRGB",
+        self::TC_BT_2020_10BIT  => "TC_BT_2020_10BIT",
+        self::TC_BT_2020_12BIT  => "TC_BT_2020_12BIT",
+        self::TC_SMPTE_2084     => "TC_SMPTE_2084",
+        self::TC_SMPTE_428      => "TC_SMPTE_428",
+        self::TC_HLG            => "TC_HLG",
+    ];
     //
     const MC_IDENTITY    = 0;
+    const MC_BT_709      = 1;
     const MC_UNSPECIFIED = 2;
+    const MC_RESERVED_3  = 3;
+    const MC_FCC         = 4;
+    const MC_BT_470_B_G  = 5;
+    const MC_BT_601      = 6;
+    const MC_SMPTE_240   = 7;
+    const MC_SMPTE_YCGCO = 8;
+    const MC_BT_2020_NCL = 9;
+    const MC_BT_2020_CL  = 10;
+    const MC_SMPTE_2085  = 11;
+    const MC_CHROMAT_NCL = 12;
+    const MC_CHROMAT_CL  = 13;
+    const MC_ICTCP       = 14;
+    static $MCNameTable = [
+        self::MC_IDENTITY    => "MC_IDENTITY",
+        self::MC_BT_709      => "MC_BT_709",
+        self::MC_UNSPECIFIED => "MC_UNSPECIFIED",
+        self::MC_RESERVED_3  => "MC_RESERVED_3",
+        self::MC_FCC         => "MC_FCC",
+        self::MC_BT_470_B_G  => "MC_BT_470_B_G",
+        self::MC_BT_601      => "MC_BT_601",
+        self::MC_SMPTE_240   => "MC_SMPTE_240",
+        self::MC_SMPTE_YCGCO => "MC_SMPTE_YCGCO",
+        self::MC_BT_2020_NCL => "MC_BT_2020_NCL",
+        self::MC_BT_2020_CL  => "MC_BT_2020_CL",
+        self::MC_SMPTE_2085  => "MC_SMPTE_2085",
+        self::MC_CHROMAT_NCL => "MC_CHROMAT_NCL",
+        self::MC_CHROMAT_CL  => "MC_CHROMAT_CL",
+        self::MC_ICTCP       => "MC_ICTCP",
+    ];
     //
-    const CSP_UNKNOWN = 0;
+    const CSP_UNKNOWN  = 0;
+    const CSP_VERTICAL = 1;
+    const CSP_COLOCAED = 2;
+    const CSP_RESERVED = 3;
+    static $CSPNameTable = [
+        self::CSP_UNKNOWN  => "CSP_UNKNOWN",
+        self::CSP_VERTICAL => "CSP_VERTICAL",
+        self::CSP_COLOCAED => "CSP_COLOCAED",
+        self::CSP_RESERVED => "CSP_RESERVED",
+    ];
     //
     var $OperatingPointIdc = null;
     var $OrderHintBits = null;
@@ -65,6 +166,38 @@ class IO_AV1_OBU {
     static function getOBUTypeName($obu_type) {
         if (isset(self::$OBUTypeNameTable[$obu_type])) {
             $name = self::$OBUTypeNameTable[$obu_type];
+        } else {
+            $name = "UNKNOWN";
+        }
+        return $name;
+    }
+    static function getCPName($cp) {
+        if (isset(self::$CPNameTable[$cp])) {
+            $name = self::$CPNameTable[$cp];
+        } else {
+            $name = "UNKNOWN";
+        }
+        return $name;
+    }
+    static function getTCName($cp) {
+        if (isset(self::$TCNameTable[$cp])) {
+            $name = self::$TCNameTable[$cp];
+        } else {
+            $name = "UNKNOWN";
+        }
+        return $name;
+    }
+    static function getMCName($cp) {
+        if (isset(self::$MCNameTable[$cp])) {
+            $name = self::$MCNameTable[$cp];
+        } else {
+            $name = "UNKNOWN";
+        }
+        return $name;
+    }
+    static function getCSPName($cp) {
+        if (isset(self::$CSPNameTable[$cp])) {
+            $name = self::$CSPNameTable[$cp];
         } else {
             $name = "UNKNOWN";
         }
