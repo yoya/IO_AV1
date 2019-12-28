@@ -376,7 +376,7 @@ class IO_AV1_OBU {
             }
             $obu["seq_choose_screen_content_tools"] = $bit->get_f(1);
             if ($obu["seq_choose_screen_content_tools"]) {
-                $obu["seq_force_screen_content_tools"] = SELECT_SCREEN_CONTENT_TOOLS;
+                $obu["seq_force_screen_content_tools"] = self::SELECT_SCREEN_CONTENT_TOOLS;
             } else {
                 $obu["seq_force_screen_content_tools"] = $bit->get_f(1);
             }
