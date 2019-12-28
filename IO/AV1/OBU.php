@@ -40,7 +40,15 @@ class IO_AV1_OBU {
         14 => "Reserved",
         self::OBU_PADDING                => "OBU_PADDING"
     ];
+    // 3. Symbols
+    const SELECT_SCREEN_CONTENT_TOOLS = 2;
+    const SELECT_INTEGER_MV           = 2;
+    //
     var $OperatingPointIdc = null;
+    var $OrderHintBits = null;
+    function choose_operating_point() {
+        return 0; // XXX
+    }
     static function getOBUTypeName($obu_type) {
         if (isset(self::$OBUTypeNameTable[$obu_type])) {
             $name = self::$OBUTypeNameTable[$obu_type];
@@ -128,7 +136,7 @@ class IO_AV1_OBU {
         if ($obu["reduced_still_picture_header"]) {
             $obu["timing_info_present_flag"]            = 0;
             $obu["decoder_model_info_present_flag"]     = 0;
-            $obu["initial_display_delay_present_flag"] = 0;
+            $obu["initial_display_delay_present_flag"]  = 0;
             $obu["operating_points_cnt_minus_1"]        = 0;
             $obu["operating_point_idc"] = [0 => 0];
             $obu["seq_level_idx"] = [0 => $bit->get_f(5)];
@@ -178,6 +186,74 @@ class IO_AV1_OBU {
                 }
             }
         }
+        $operatingPoint = $this->choose_operating_point();
+        $this->OperatingPointIdc = $obu["operating_point_idc"][$operatingPoint];
+        $obu["frame_width_bits_minus_1"]  = $bit->get_f(4);
+        $obu["frame_height_bits_minus_1"] = $bit->get_f(4);
+        $obu["frame_width_minus_1"]  = $bit->get_f($obu["frame_width_bits_minus_1"] + 1);
+        $obu["frame_height_minus_1"] = $bit->get_f($obu["frame_height_bits_minus_1"] + 1);
+        if ($obu["reduced_still_picture_header"]) {
+            $obu["frame_id_numbers_present_flag"] = 0;
+        } else {
+            $obu["frame_id_numbers_present_flag"] = $bit->get_f(1);
+        }
+        if ($obu["frame_id_numbers_present_flag"]) {
+            $obu["delta_frame_id_length_minus_2"]      = $bit->get_f(4);
+            $obu["additional_frame_id_length_minus_1"] = $bit->get_f(4);
+        }
+        $obu["use_128x128_superblock"] = $bit->get_f(1);
+        $obu["enable_filter_intra"] = $bit->get_f(1);
+        $obu["enable_intra_edge_filter"] = $bit->get_f(1);
+        if ($obu["reduced_still_picture_header"]) {
+            $obu["enable_interintra_compound"] = 0;
+            $obu["enable_masked_compound"]     = 0;
+            $obu["enable_warped_motion"]       = 0;
+            $obu["enable_dual_filter"]         = 0;
+            $obu["enable_order_hint"]          = 0;
+            $obu["enable_jnt_comp"]            = 0;
+            $obu["enable_ref_frame_mvs"]       = 0;
+            $obu["seq_force_screen_content_tools"] = self::SELECT_SCREEN_CONTENT_TOOLS;
+            $obu["seq_force_integer_mv"] = self::SELECT_INTEGER_MV;
+            $this->OrderHintBits = 0;
+        } else {
+            $obu["enable_interintra_compound"] = $bit->get_f(1);
+            $obu["enable_masked_compound"]     = $bit->get_f(1);
+            $obu["enable_warped_motion"]       = $bit->get_f(1);
+            $obu["enable_dual_filter"]         = $bit->get_f(1);
+            $obu["enable_order_hint"]          = $bit->get_f(1);
+            if ($obu["enable_order_hint"]) {
+                $obu["enable_jnt_comp"]      = $bit->get_f(1);
+                $obu["enable_ref_frame_mvs"] = $bit->get_f(1);
+            } else {
+                $obu["enable_jnt_comp"]      = 0;
+                $obu["enable_ref_frame_mvs"] = 0;
+            }
+            $obu["seq_choose_screen_content_tools"] = $bit->get_f(1);
+            if ($obu["seq_choose_screen_content_tools"]) {
+                $obu["seq_force_screen_content_tools"] = SELECT_SCREEN_CONTENT_TOOLS;
+            } else {
+                $obu["seq_force_screen_content_tools"] = $bit->get_f(1);
+            }
+            if ($obu["seq_force_screen_content_tools"] > 0) {
+                $obu["seq_choose_integer_mv"] = $bit->get_f(1);
+                if ($obu["seq_choose_integer_mv"]) {
+                    $obu["seq_force_integer_mv"] = self::SELECT_INTEGER_MV;
+                } else {
+                    $obu["seq_force_integer_mv"] = $bit->get_f(1);
+                }
+            } else {
+                $obu["seq_force_integer_mv"] = self::SELECT_INTEGER_MV;
+            }
+            if ($obu["enable_order_hint"]) {
+                $obu["order_hint_bits_minus_1"] = $bit->get_f(3);
+                $this->OrderHintBits = $obu["order_hint_bits_minus_1"] + 1;
+            } else {
+                $this->OrderHintBits = 0;
+            }
+        }
+        $obu["enable_superres"] = $bit->get_f(1);
+        $obu["enable_cdef"] = $bit->get_f(1);
+        $obu["enable_restoration"] = $bit->get_f(1);
         return $obu;
     }
     function parse_timing_info($bit) {
@@ -290,6 +366,70 @@ class IO_AV1_OBU {
                 }
             }
         }
+        echo "    OperatingPointIdc:{$this->OperatingPointIdc}\n";
+        echo "    frame_width_bits_minus_1:{$obu['frame_width_bits_minus_1']}";
+        echo " frame_height_bits_minus_1:{$obu['frame_height_bits_minus_1']}\n";
+        echo "    frame_width_minus_1:{$obu['frame_width_minus_1']}";
+        echo " frame_height_minus_1:{$obu['frame_height_minus_1']}\n";
+        echo "    frame_id_numbers_present_flag:{$obu['frame_id_numbers_present_flag']}\n";
+        if ($obu["frame_id_numbers_present_flag"]) {
+            echo "      delta_frame_id_length_minus_2:{$obu['delta_frame_id_length_minus_2']}";
+            echo " additional_frame_id_length_minus_1:{$obu['additional_frame_id_length_minus_1']}\n";
+        }
+        echo "    use_128x128_superblock:{$obu['use_128x128_superblock']}";
+        echo " enable_filter_intra:{$obu['enable_filter_intra']}";
+        echo " enable_intra_edge_filter:{$obu['enable_intra_edge_filter']}\n";
+        if ($obu["reduced_still_picture_header"]) {
+            echo "      enable_interintra_compound:{$obu['enable_interintra_compound']}";
+            echo " enable_masked_compound:{$obu['enable_masked_compound']}\n";
+            echo "      enable_warped_motion:{$obu['enable_warped_motion']}";
+            echo " enable_dual_filter:{$obu['enable_dual_filter']}\n";
+            echo "      enable_order_hint:{$obu['enable_order_hint']}\n";
+            echo "      enable_jnt_comp:{$obu['enable_jnt_comp']}";
+            echo " enable_ref_frame_mvs:{$obu['enable_ref_frame_mvs']}\n";
+            echo "      seq_force_screen_content_tools:{$obu['seq_force_screen_content_tools']}(SELECT_SCREEN_CONTENT_TOOLS)\n";
+            echo "      seq_force_integer_mv:{$obu['seq_force_integer_mv']}(SELECT_INTEGER_MV)\n";
+            echo "      OrderHintBits:{$this->OrderHintBits}\n";
+        } else {
+            echo "      enable_interintra_compound:{$obu['enable_interintra_compound']}";
+            echo " enable_masked_compound:{$obu['enable_masked_compound']}\n";
+            echo "      enable_warped_motion:{$obu['enable_warped_motion']}";
+            echo " enable_dual_filter:{$obu['enable_dual_filter']}\n";
+            echo "      enable_order_hint:{$obu['enable_order_hint']}\n";
+            if ($obu["enable_order_hint"]) {
+                echo "        enable_jnt_comp:{$obu['enable_jnt_comp']}";
+                echo " enable_ref_frame_mvs:{$obu['enable_ref_frame_mvs']}\n";
+            } else {
+                echo "        enable_jnt_comp:{$obu['enable_jnt_comp']}";
+                echo " enable_ref_frame_mvs:{$obu['enable_ref_frame_mvs']}\n";
+            }
+            echo "      seq_choose_screen_content_tools:{$obu['seq_choose_screen_content_tools']}\n";
+            if ($obu["seq_choose_screen_content_tools"]) {
+                echo "        seq_force_screen_content_tools:{$obu['seq_force_screen_content_tools']}(SELECT_SCREEN_CONTENT_TOOLS)\n";
+            } else {
+                echo "        seq_force_screen_content_tools:{$obu['seq_force_screen_content_tools']}\n";
+            }
+            if ($obu["seq_force_screen_content_tools"] > 0) {
+                echo "        seq_choose_integer_mv:{$obu['seq_choose_integer_mv']}\n";
+                if ($obu["seq_choose_integer_mv"]) {
+                    echo "          seq_force_integer_mv:{$obu['seq_force_integer_mv']}(SELECT_INTEGER_MV)\n";
+                } else {
+                    echo "          seq_force_integer_mv:{$obu['seq_force_integer_mv']}\n";
+                }
+            } else {
+                echo "          seq_force_integer_mv:{$obu['seq_force_integer_mv']}(SELECT_INTEGER_MV)\n";
+            }
+            if ($obu["enable_order_hint"]) {
+                echo "          order_hint_bits_minus_1:{$obu['order_hint_bits_minus_1']}";
+                echo " OrderHintBits:{$this->OrderHintBits}\n";
+            } else {
+                echo "          OrderHintBits:{$this->OrderHintBits}\n";
+            }
+        }
+        echo "    enable_superres:{$obu['enable_superres']}";
+        echo " enable_cdef:{$obu['enable_cdef']}\n";
+        echo " enable_restoration:{$obu['enable_restoration']}\n";
+        
     }
     function dump_timing_info($info, $opts) {
         echo "WARN: dump_timing_info not implemented yet.\n";
