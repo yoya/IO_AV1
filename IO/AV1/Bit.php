@@ -26,7 +26,7 @@ class IO_AV1_Bit extends IO_Bit {
     function get_f($n) {
         return $this->getUIBits($n);
     }
-    function get_uvlc($n) {
+    function get_uvlc() {
         $leadingZeros = 0;
         while (true) {
             $done = $this->get_f(1);
