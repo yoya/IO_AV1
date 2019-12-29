@@ -245,6 +245,7 @@ class IO_AV1_OBU {
                     $obu["sequence_header_obu"] = $this->parse_sequence_header_obu($bit);
                     break;
                 case self::OBU_TEMPORAL_DELIMITER:
+                    $this->parse_temporal_delimiter_obu($bit);
                     break;
                 case self::OBU_FRAME_HEADER:
                     break;
@@ -519,6 +520,7 @@ class IO_AV1_OBU {
                 $this->dump_sequence_header_obu($obu["sequence_header_obu"], $opts);
                 break;
             case self::OBU_TEMPORAL_DELIMITER:
+                $this->dump_temporal_delimiter_obu($opts);
                 break;
             case self::OBU_FRAME_HEADER:
                 break;
@@ -761,6 +763,7 @@ class IO_AV1_OBU {
     }
     // 5.6. Temporal delimiter obu syntax
     function dump_temporal_delimiter_obu($opts) {
+        echo "  dump_temporal_delimiter_obu:\n";
         echo "    SeenFrameHeader:{$this->SeenFrameHeader}\n";
     }
 }
