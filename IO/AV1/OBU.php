@@ -160,6 +160,7 @@ class IO_AV1_OBU {
     var $OrderHintBits = null;
     var $BitDepth = null;
     var $NumPlanes = null;
+    var $SeenFrameHeader = null;
     function choose_operating_point() {
         return 0; // XXX
     }
@@ -206,6 +207,7 @@ class IO_AV1_OBU {
     /*
      * parser functions
      */
+    // 5.3.1. Geenral OBU syntax
     function parse($data, $opts = array()) {
         $this->_data = $data;
         $this->OBUs = [];
@@ -255,6 +257,7 @@ class IO_AV1_OBU {
                 $this->OBUs []= $obu;
         }
     }
+    // 5.3.2. OBU header syntax
     function parse_obu_header($bit, $opts = array()) {
         $obu_header = [];
         $obu_header["obu_forbidden_bit"]  = $bit->get_f(1);
@@ -267,6 +270,7 @@ class IO_AV1_OBU {
         }
         return $obu_header;
     }
+    // 5.5.3. OBU extension header syntax
     function parse_obu_extention_header($bit, $opts = array()) {
         $obu_extention_header = [];
         $obu_extention_header["temporal_id"]    = $bit->get_f(3);
@@ -274,6 +278,7 @@ class IO_AV1_OBU {
         $obu_extention_header["reserved_3bits"] = $bit->get_f(3);
         return $obu_extention_header;
     }
+    // 5.5.1. General sequence header OBU syntax
     function parse_sequence_header_obu($bit) {
         $obu = [];
         $obu["seq_profile"]                  = $bit->get_f(3);
@@ -404,18 +409,7 @@ class IO_AV1_OBU {
         $obu["film_grain_params_present"] = $bit->get_f(1);
         return $obu;
     }
-    function parse_timing_info($bit) {
-        $info = [];
-        throw "ERROR: parse_timing_info: not implemented yet\n";
-    }
-    function parse_decoder_model_info($bit) {
-        $info = [];
-        throw "ERROR: parse_decoder_model_info: not implemented yet\n";
-    }
-    function parse_operating_paramters_info($bit) {
-        $info = [];
-        throw "ERROR: parse_operating_parameters_info: not implemented yet\n";
-    }
+    // 5.5.2. Color config syntax
     function parse_color_config($bit, $obu) {
         $config = [];
         $config["high_bitdepth"] = $bit->get_f(1);
@@ -484,9 +478,29 @@ class IO_AV1_OBU {
         $config["separate_uv_delta_q"] = $bit->get_f(1);
         return $config;
     }
+    // 5.5.3. Timing info syntax
+    function parse_timing_info($bit) {
+        $info = [];
+        throw "ERROR: parse_timing_info: not implemented yet\n";
+    }
+    // 5.5.4. Decoder model info syntax
+    function parse_decoder_model_info($bit) {
+        $info = [];
+        throw "ERROR: parse_decoder_model_info: not implemented yet\n";
+    }
+    // 5.5.5. Operating parameters info syntax
+    function parse_operating_paramters_info($bit) {
+        $info = [];
+        throw "ERROR: parse_operating_parameters_info: not implemented yet\n";
+    }
+    // 5.6. Temporal delimiter obu syntax
+    function parse_temporal_delimiter_obu($bit) {
+        $this->SeenFrameHeader = 0;
+    }
     /*
      * dumper functions
      */
+    // 5.3.1. Geenral OBU syntax
     function dump($opts = array()) {
         foreach ($this->OBUs as $i => $obu) {
             $obu_header = $obu["obu_header"];
@@ -515,6 +529,7 @@ class IO_AV1_OBU {
             }
         }
     }
+    // 5.3.2. OBU header syntax
     function dump_obu_header($obu, $opts = array()) {
         echo "  obu_header:\n";
         echo "    obu_forbidden_bit:{$obu['obu_forbidden_bit']} ";
@@ -526,12 +541,14 @@ class IO_AV1_OBU {
             $this->dump_obu_extention_header($obu["obu_extention_header"], $opts);
         }
     }
+    // 5.5.3. OBU extension header syntax
     function dump_obu_extention_header($obu, $opts = array()) {
         echo "    obu_extention_header:\n";
         echo "      temporal_id:{$obu['temporal_id']} ";
         echo "spatial_id:{$obu['spatial_id']} ";
         echo "reserved_3bits:{$obu['reserved_3bits']}\n";
     }
+    // 5.5.1. General sequence header OBU syntax
     function dump_sequence_header_obu($obu, $opts = array()) {
         echo "  sequence_header_obu:\n";
         echo "    seq_profile:{$obu['seq_profile']} ";
@@ -654,15 +671,7 @@ class IO_AV1_OBU {
         $this->dump_color_config($obu["color_config"], $obu, $opts);
         echo "    film_grain_params_present:{$obu['film_grain_params_present']}\n";
     }
-    function dump_timing_info($info, $opts) {
-        echo "WARN: dump_timing_info not implemented yet.\n";
-    }
-    function dump_decoder_model_info($info, $opts) {
-        echo "WARN: dump_decoder_model_info not implemented yet.\n";
-    }
-    function dump_operating_paramters_info($info, $opts) {
-        echo "WARN: dump_operating_paramters_info not implemented yet.\n";
-    }
+    // 5.5.2. Color config syntax
     function dump_color_config($config, $obu, $opts) {
         echo "    color_config:\n";
         echo "      high_bitdepth:{$config['high_bitdepth']}\n";
@@ -737,5 +746,21 @@ class IO_AV1_OBU {
             }
         }
         echo "      separate_uv_delta_q:{$config['separate_uv_delta_q']}\n";
+    }
+    // 5.5.3. Timing info syntax
+    function dump_timing_info($info, $opts) {
+        echo "WARN: dump_timing_info not implemented yet.\n";
+    }
+    // 5.5.4. Decoder model info syntax
+    function dump_decoder_model_info($info, $opts) {
+        echo "WARN: dump_decoder_model_info not implemented yet.\n";
+    }
+    // 5.5.5. Operating parameters info syntax
+    function dump_operating_paramters_info($info, $opts) {
+        echo "WARN: dump_operating_paramters_info not implemented yet.\n";
+    }
+    // 5.6. Temporal delimiter obu syntax
+    function dump_temporal_delimiter_obu($opts) {
+        echo "    SeenFrameHeader:{$this->SeenFrameHeader}\n";
     }
 }
