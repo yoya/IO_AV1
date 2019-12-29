@@ -37,10 +37,10 @@ class IO_AV1 {
     }
     function dump($opts = array()) {
         if (! is_null($this->IVF)) {
-            $this->IVF->dump();
+            $this->IVF->dump($opts);
         }
         if (! is_null($this->OBU)) {
-            $this->OBU->dump();
+            $this->OBU->dump($opts);
         }
     }
 }

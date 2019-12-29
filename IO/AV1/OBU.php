@@ -254,7 +254,8 @@ class IO_AV1_OBU {
                 default:
                     break;
                 }
-                $bit->set_position($startPosition + $obu_size);;
+                $obu["_offset"] = $startPosition;
+                $bit->set_position($startPosition + $obu_size);
                 $this->OBUs []= $obu;
         }
     }
@@ -528,6 +529,11 @@ class IO_AV1_OBU {
                 break;
             default:
                 break;
+            }
+            if ($opts["hexdump"]) {
+                $bit = new IO_Bit();
+                $bit->input($this->_data);
+                $bit->hexdump($obu["_offset"], $obu["obu_size"]);
             }
         }
     }
