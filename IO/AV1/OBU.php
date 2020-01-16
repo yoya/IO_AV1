@@ -483,7 +483,13 @@ class IO_AV1_OBU {
     // 5.5.3. Timing info syntax
     function parse_timing_info($bit) {
         $info = [];
-        throw "ERROR: parse_timing_info: not implemented yet\n";
+        $info["num_units_in_display_tick"] = $bit->get_f(32);
+        $info["time_scale"] = $bit->get_f(32);
+        $info["equal_picture_interval"] = $bit->get_f(1);
+        if ($info["equal_picture_interval"] ) {
+            $info["num_ticks_per_picture_minus_1"] = $bit->get_uvlc();
+        }
+        return $info;
     }
     // 5.5.4. Decoder model info syntax
     function parse_decoder_model_info($bit) {
@@ -757,7 +763,13 @@ class IO_AV1_OBU {
     }
     // 5.5.3. Timing info syntax
     function dump_timing_info($info, $opts) {
-        echo "WARN: dump_timing_info not implemented yet.\n";
+        echo "    timing_info:\n";
+        echo "      num_units_in_display_tick:{$info['num_units_in_display_tick']}";
+        echo " time_scale:{$info['time_scale']}";
+        echo " equal_picture_interval:{$info['equal_picture_interval']}\n";
+        if ($info["equal_picture_interval"] ) {
+            echo "        num_ticks_per_picture_minus_1:{$info['num_ticks_per_picture_minus_1']}\n";
+        }
     }
     // 5.5.4. Decoder model info syntax
     function dump_decoder_model_info($info, $opts) {
