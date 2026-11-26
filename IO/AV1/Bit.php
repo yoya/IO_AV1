@@ -45,7 +45,7 @@ class IO_AV1_Bit extends IO_Bit {
         $t = 0;
         for ($i = 0 ; $i < $n ; $i++) {
             $byte = $this->get_f(8);
-            $t += (byte << ($i * 8));
+            $t += ($byte << ($i * 8));
         }
         return $t;
     }
