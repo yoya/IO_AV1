@@ -612,7 +612,10 @@ class IO_AV1_OBU {
                 }
                 echo "      initial_display_delay_present_flag:{$obu['initial_display_delay_present_flag']}\n";
                 if ($obu["initial_display_delay_present_flag"]) {
-                    echo "        initial_display_delay_minus_1_$i:{$obu['initial_display_delay_minus_1'][$i]}\n";
+                    echo "        initial_display_delay_present_for_this_op_$i:{$obu['initial_display_delay_present_for_this_op'][$i]}\n";
+                    if ($obu["initial_display_delay_present_for_this_op"][$i]) {
+                        echo "          initial_display_delay_minus_1_$i:{$obu['initial_display_delay_minus_1'][$i]}\n";
+                    }
                 }
             }
         }

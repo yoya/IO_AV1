@@ -169,5 +169,19 @@ list($output, $warnings) = dumpOf(parseAV1(obu(2, '')));
 check('dump without options warnings', array(), $warnings);
 check('dump without options output', true, strpos($output, "[0]obu_type:2 (OBU_TEMPORAL_DELIMITER)") !== false);
 
+/*
+ * dump of initial_display_delay (present_for_this_op 0 and 1)
+ */
+foreach (array('0' => null, '1 0101' => 5) as $bits => $minus1) {
+    $s = '000 0 0 0'.'1 00000 000000000000 00000 '.$bits.seqTail(false);
+    list($output, $warnings) = dumpOf(parseAV1(obu(1, bits2bytes($s))), array());
+    $present = is_null($minus1) ? 0 : 1;
+    check("initial_display_delay $present warnings", array(), $warnings);
+    check("initial_display_delay $present present_for_this_op", true,
+          strpos($output, "initial_display_delay_present_for_this_op_0:$present\n") !== false);
+    check("initial_display_delay $present minus_1", !is_null($minus1),
+          strpos($output, "initial_display_delay_minus_1_0:$minus1\n") !== false);
+}
+
 echo "passed: $passed, failed: $failed".PHP_EOL;
 exit($failed ? 1 : 0);
