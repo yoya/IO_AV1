@@ -299,10 +299,10 @@ class IO_AV1_OBU {
         } else {
             $obu["timing_info_present_flag"] = $bit->get_f(1);
             if ($obu["timing_info_present_flag"]) {
-                $obu["timing_info"] = $this->parse_timing_info();
+                $obu["timing_info"] = $this->parse_timing_info($bit);
                 $obu["decoder_model_info_present_flag"] = $bit->get_f(1);
                 if ($obu["decoder_model_info_present_flag"]) {
-                    $obu["decoder_model_info"] = $this->parse_decoder_model_info();
+                    $obu["decoder_model_info"] = $this->parse_decoder_model_info($bit);
                 }
             } else {
                 $obu["decoder_model_info_present_flag"] = 0;

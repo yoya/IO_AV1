@@ -42,6 +42,36 @@ function bits2bytes($s) {
     return $o;
 }
 
+// OBU with (or without) obu_size field
+function obu($type, $payload, $hasSize = true) {
+    $h = ($type << 3) | ($hasSize ? 2 : 0);
+    return chr($h).($hasSize ? chr(strlen($payload)) : '').$payload;
+}
+
+// sequence header bits after the operating points (16x16, 8bit 4:2:0)
+function seqTail($frameIdPresent) {
+    $s  = '0011 0011 1111 1111';  // frame_width/height_bits_minus_1=3, frame_width/height_minus_1=15
+    // frame_id_numbers_present_flag, delta_frame_id_length_minus_2 f(4)=5, additional_frame_id_length_minus_1 f(3)=3
+    $s .= $frameIdPresent ? '1 0101 011' : '0';
+    $s .= '1 0 1';                // use_128x128_superblock=1 enable_filter_intra=0 enable_intra_edge_filter=1
+    $s .= '0 0 0 0 0';            // interintra masked warped dual order_hint
+    $s .= '1 1';                  // seq_choose_screen_content_tools=1 seq_choose_integer_mv=1
+    $s .= '0 1 0';                // superres=0 cdef=1 restoration=0
+    $s .= '0 0 0 0 00 0';         // color_config: high_bitdepth mono_chrome color_description color_range csp(2) separate_uv_delta_q
+    $s .= '1';                    // film_grain_params_present=1
+    return $s.'1';                // trailing one bit
+}
+
+function parseAV1($data) {
+    $av1 = new IO_AV1();
+    try {
+        $av1->parse($data);
+    } catch (Throwable $e) {
+        return get_class($e).": ".$e->getMessage();
+    }
+    return $av1;
+}
+
 /*
  * IO_AV1_Bit::get_le
  */
@@ -53,6 +83,21 @@ try {
     $v = get_class($e).": ".$e->getMessage();
 }
 check('get_le', 513, $v);
+
+/*
+ * sequence header with timing_info
+ */
+$s = '000 0 0 1'.sprintf('%032b', 1001).sprintf('%032b', 30000).'0'.'0'. // timing_info, decoder_model_info_present_flag=0
+    '0 00000 000000000000 00000'.seqTail(false);
+$av1 = parseAV1(obu(1, bits2bytes($s)));
+check('timing_info parse', true, is_object($av1));
+if (is_object($av1)) {
+    $sh = $av1->OBU->OBUs[0]['sequence_header_obu'];
+    check('timing_info', array('num_units_in_display_tick' => 1001, 'time_scale' => 30000,
+                               'equal_picture_interval' => 0), $sh['timing_info']);
+    check('timing_info frame_width_minus_1', 15, $sh['frame_width_minus_1']);
+    check('timing_info film_grain_params_present', 1, $sh['film_grain_params_present']);
+}
 
 echo "passed: $passed, failed: $failed".PHP_EOL;
 exit($failed ? 1 : 0);
