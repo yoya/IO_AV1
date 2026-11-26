@@ -183,5 +183,15 @@ foreach (array('0' => null, '1 0101' => 5) as $bits => $minus1) {
           strpos($output, "initial_display_delay_minus_1_0:$minus1\n") !== false);
 }
 
+/*
+ * IO_AV1_IVF::isIVF with an unsupported version
+ */
+try {
+    $v = IO_AV1_IVF::isIVF("DKIF\x01\x00".str_repeat("\0", 26));
+} catch (Throwable $e) {
+    $v = get_class($e).": ".$e->getMessage();
+}
+check('isIVF version 1', false, $v);
+
 echo "passed: $passed, failed: $failed".PHP_EOL;
 exit($failed ? 1 : 0);

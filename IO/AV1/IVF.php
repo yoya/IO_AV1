@@ -23,7 +23,7 @@ class IO_AV1_IVF {
         }
         $version = ord($data[4]) + 0x100*ord($data[5]);
         if ($version !== 0) {
-            fprint(STDERR, "DKIF version:$version shoud be 0\n");
+            fprintf(STDERR, "DKIF version:$version should be 0\n");
             return false;
         }
         return true;
