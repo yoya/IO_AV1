@@ -80,20 +80,19 @@ OBU_SEQUENCE_HEADER size:9
 |---|---|
 | `IO_AV1` | 入口。`parse()` は先頭が IVF (`DKIF`) なら `IO_AV1_IVF` に、そうでなければ `IO_AV1_OBU` に渡す。結果は `$IVF` か `$OBU` に入る |
 | `IO_AV1_IVF` | IVF コンテナ。ヘッダ (コーデック、幅・高さ、フレームレート、フレーム数) と各フレームを読み、フレームの中身を `IO_AV1_OBU` で解釈する |
-| `IO_AV1_OBU` | OBU の列。OBU ヘッダ・拡張ヘッダと、sequence header (color_config, timing_info を含む)、temporal delimiter を解釈する |
+| `IO_AV1_OBU` | OBU の列。OBU ヘッダ・拡張ヘッダと、sequence header (color_config, timing_info, decoder_model_info, operating_parameters_info を含む)、temporal delimiter を解釈する |
 | `IO_AV1_Bit` | `IO_Bit` の派生。仕様書の記法に合わせた `get_f(n)`, `get_uvlc()`, `get_le(n)`, `get_leb128()` を持つ |
 | `IO_Bit` (別パッケージ) | ビット単位の読み込み |
 
 - 解釈した結果は、仕様書のシンタックス要素名をキーにした配列で持つ (`$obu->OBUs[$i]["sequence_header_obu"]["seq_profile"]` など)。
 - sequence header と temporal delimiter 以外の OBU は、中身を解釈せず `obu_size` だけ読み飛ばす。
+- IVF のフレームは、ヘッダのフレーム数に関係なくデータの終わりまで読む (書き出し側がシークできないと、フレーム数に 0 や 0xFFFFFFFF が入る)。ヘッダの値は `frameNum` にそのまま入り、`getFrameNum()` は実際に読んだフレーム数を返す。両者が違うと、ダンプのときに標準エラーへ警告を出す。
 - ダンプで `(...)` に囲まれた値は、ビットストリームから読まずに条件から決まる値です。
 - 書き出し (build) の機能はありません。
 
 # 既知の制限
 
 - frame header、tile group、metadata などの OBU は解釈しない。
-- decoder_model_info と operating_parameters_info は未実装で、sequence header の `decoder_model_info_present_flag` が 1 だと例外になる。
-- IVF のヘッダのフレーム数より 1 個多くフレームを読む。ヘッダに実際のフレーム数を書くエンコーダ (FFmpeg など) の IVF は、末尾を越えて読もうとして `IO_Bit_Exception` になる。
 - temporal delimiter 以外で `obu_size` が 0 の OBU があると例外になる。
 - 操作点 (operating point) は 0 固定で、拡張ヘッダの temporal_id / spatial_id による選別はしない。
 - PHP 8.2 以降では動的プロパティの Deprecated メッセージが出る。`php -d error_reporting='E_ALL & ~E_DEPRECATED' ...` で消せる。

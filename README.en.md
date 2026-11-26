@@ -78,20 +78,19 @@ OBU_SEQUENCE_HEADER size:9
 |---|---|
 | `IO_AV1` | Entry point. `parse()` hands the data to `IO_AV1_IVF` if it starts with IVF (`DKIF`), otherwise to `IO_AV1_OBU`. The result goes to `$IVF` or `$OBU` |
 | `IO_AV1_IVF` | IVF container. Reads the header (codec, width/height, frame rate, frame count) and each frame, and parses the frame data with `IO_AV1_OBU` |
-| `IO_AV1_OBU` | Sequence of OBUs. Parses the OBU header, the extension header, the sequence header (including color_config and timing_info) and the temporal delimiter |
+| `IO_AV1_OBU` | Sequence of OBUs. Parses the OBU header, the extension header, the sequence header (including color_config, timing_info, decoder_model_info and operating_parameters_info) and the temporal delimiter |
 | `IO_AV1_Bit` | Subclass of `IO_Bit` with `get_f(n)`, `get_uvlc()`, `get_le(n)`, `get_leb128()` named after the spec's descriptors |
 | `IO_Bit` (separate package) | Bit-level reading |
 
 - Parsed results are arrays keyed by the spec's syntax element names (`$obu->OBUs[$i]["sequence_header_obu"]["seq_profile"]` etc.).
 - OBUs other than the sequence header and the temporal delimiter are not parsed; they are skipped by `obu_size`.
+- IVF frames are read until the data ends, regardless of the header's frame count (writers that cannot seek put 0 or 0xFFFFFFFF there). The header value goes to `frameNum` as is, and `getFrameNum()` returns the number of frames read. When they differ, the dump prints a warning to stderr.
 - Values in `(...)` in the dump are not read from the bitstream but determined by conditions.
 - There is no writer (build).
 
 # Known limitations
 
 - Frame header, tile group, metadata and other OBUs are not parsed.
-- decoder_model_info and operating_parameters_info are not implemented; a sequence header with `decoder_model_info_present_flag` = 1 throws an exception.
-- One more frame than the IVF header's frame count is read. IVF files whose header holds the actual frame count (e.g. from FFmpeg) fail with `IO_Bit_Exception` when reading past the end.
 - An OBU with `obu_size` 0 other than the temporal delimiter throws an exception.
 - The operating point is fixed to 0; OBUs are not selected by temporal_id / spatial_id of the extension header.
 - PHP 8.2 or later prints Deprecated messages for dynamic properties. `php -d error_reporting='E_ALL & ~E_DEPRECATED' ...` hides them.
