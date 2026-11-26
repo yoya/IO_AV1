@@ -62,6 +62,24 @@ function seqTail($frameIdPresent) {
     return $s.'1';                // trailing one bit
 }
 
+// output and warnings of $obj->dump($opts) (no options when $opts is null)
+function dumpOf($obj, $opts = null) {
+    $warnings = array();
+    set_error_handler(function($no, $str) use (&$warnings) {
+        $warnings []= $str;
+        return true;
+    }, E_ALL & ~E_DEPRECATED);
+    ob_start();
+    if (is_null($opts)) {
+        $obj->dump();
+    } else {
+        $obj->dump($opts);
+    }
+    $output = ob_get_clean();
+    restore_error_handler();
+    return array($output, $warnings);
+}
+
 function parseAV1($data) {
     $av1 = new IO_AV1();
     try {
@@ -143,6 +161,13 @@ foreach ($av1->OBU->OBUs as $o) {
     $v []= array($o['obu_header']['obu_type'], $o['obu_size'], $o['_offset']);
 }
 check('obu_size without size field', array(array(2, 0, 2), array(1, strlen($seq), 3)), $v);
+
+/*
+ * IO_AV1::dump() without options
+ */
+list($output, $warnings) = dumpOf(parseAV1(obu(2, '')));
+check('dump without options warnings', array(), $warnings);
+check('dump without options output', true, strpos($output, "[0]obu_type:2 (OBU_TEMPORAL_DELIMITER)") !== false);
 
 echo "passed: $passed, failed: $failed".PHP_EOL;
 exit($failed ? 1 : 0);

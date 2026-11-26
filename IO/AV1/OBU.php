@@ -537,7 +537,7 @@ class IO_AV1_OBU {
             default:
                 break;
             }
-            if ($opts["hexdump"]) {
+            if (! empty($opts["hexdump"])) {
                 $bit = new IO_Bit();
                 $bit->input($this->_data);
                 $bit->hexdump($obu["_offset"], $obu["obu_size"]);
