@@ -352,7 +352,7 @@ class IO_AV1_OBU {
         }
         if ($obu["frame_id_numbers_present_flag"]) {
             $obu["delta_frame_id_length_minus_2"]      = $bit->get_f(4);
-            $obu["additional_frame_id_length_minus_1"] = $bit->get_f(4);
+            $obu["additional_frame_id_length_minus_1"] = $bit->get_f(3);
         }
         $obu["use_128x128_superblock"] = $bit->get_f(1);
         $obu["enable_filter_intra"] = $bit->get_f(1);

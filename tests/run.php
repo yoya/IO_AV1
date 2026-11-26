@@ -117,5 +117,21 @@ foreach (array('parse_decoder_model_info', 'parse_operating_paramters_info') as 
     check("$method throws Exception", 'Exception', $v);
 }
 
+/*
+ * sequence header: additional_frame_id_length_minus_1 is f(3)
+ */
+$av1 = parseAV1(obu(1, bits2bytes('000 0 0 0'.'0 00000 000000000000 00000'.seqTail(true))));
+$sh = $av1->OBU->OBUs[0]['sequence_header_obu'];
+$v = array();
+foreach (array('delta_frame_id_length_minus_2', 'additional_frame_id_length_minus_1',
+               'use_128x128_superblock', 'enable_filter_intra', 'enable_intra_edge_filter',
+               'enable_cdef', 'film_grain_params_present') as $k) {
+    $v[$k] = $sh[$k];
+}
+check('frame_id fields', array('delta_frame_id_length_minus_2' => 5, 'additional_frame_id_length_minus_1' => 3,
+                               'use_128x128_superblock' => 1, 'enable_filter_intra' => 0,
+                               'enable_intra_edge_filter' => 1, 'enable_cdef' => 1,
+                               'film_grain_params_present' => 1), $v);
+
 echo "passed: $passed, failed: $failed".PHP_EOL;
 exit($failed ? 1 : 0);
