@@ -80,6 +80,15 @@ function dumpOf($obj, $opts = null) {
     return array($output, $warnings);
 }
 
+// IVF file (16x16, 30/1 fps) with the given header frame count and frames
+function ivf($count, $payloads) {
+    $ivf = "DKIF".pack('vv', 0, 32)."AV01".pack('vvVVVV', 16, 16, 30, 1, $count, 0);
+    foreach ($payloads as $i => $payload) {
+        $ivf .= pack('V', strlen($payload)).pack('P', $i).$payload;
+    }
+    return $ivf;
+}
+
 function parseAV1($data) {
     $av1 = new IO_AV1();
     try {
@@ -197,10 +206,46 @@ check('isIVF version 1', false, $v);
  * IVF dump header line
  */
 $payload = obu(2, '');
-$ivf = "DKIF".pack('vv', 0, 32)."AV01".pack('vvVVVV', 16, 16, 30, 1, 0, 0).
-    pack('V', strlen($payload)).pack('P', 0).$payload;
-list($output, $warnings) = dumpOf(parseAV1($ivf), array());
-check('ivf dump header', true, strpos($output, "codec:AV01 width:16 height:16 frameRate:30=30/1") !== false);
+$av1 = parseAV1(ivf(1, array($payload)));
+check('ivf parse', true, is_object($av1));
+if (is_object($av1)) {
+    list($output, $warnings) = dumpOf($av1, array());
+    check('ivf dump header', true, strpos($output, "codec:AV01 width:16 height:16 frameRate:30=30/1") !== false);
+}
+
+/*
+ * IVF frame count: header value as is, frames are read until the data ends
+ */
+foreach (array(array(2, 2), array(0, 2), array(0xFFFFFFFF, 2), array(1, 1)) as $c) {
+    list($count, $nframes) = $c;
+    $ivf = ivf($count, array_fill(0, $nframes, $payload));
+    $av1 = parseAV1($ivf);
+    check("ivf header count $count parse", true, is_object($av1));
+    if (! is_object($av1)) {
+        continue;
+    }
+    check("ivf header count $count frameNum", $count, $av1->IVF->frameNum);
+    check("ivf header count $count getFrameNum", $nframes, $av1->IVF->getFrameNum());
+    check("ivf header count $count frames", $nframes, count($av1->IVF->frames));
+    // dump in a child process to see stderr
+    $tmp = tempnam(sys_get_temp_dir(), 'ivf');
+    file_put_contents($tmp, $ivf);
+    $code = 'error_reporting(E_ALL & ~E_DEPRECATED); require_once "IO/AV1.php"; '.
+        '$a = new IO_AV1(); $a->parse(file_get_contents($argv[1])); $a->dump(array());';
+    $cmd = escapeshellarg(PHP_BINARY).' -d display_errors=stderr -d include_path='.
+        escapeshellarg(get_include_path()).' -r '.escapeshellarg($code).' '.escapeshellarg($tmp);
+    $proc = proc_open($cmd, array(1 => array('pipe', 'w'), 2 => array('pipe', 'w')), $pipes);
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    proc_close($proc);
+    unlink($tmp);
+    check("ivf header count $count dump frameNum", true, strpos($stdout, "frameNum:$count\n") !== false);
+    check("ivf header count $count dump last frame", true, strpos($stdout, "[".($nframes - 1)."]frameSize:") !== false);
+    $expect = ($count === $nframes) ? '' : "Warning: frameNum:$count (header) != count(frames):$nframes\n";
+    check("ivf header count $count dump stderr", $expect, $stderr);
+}
 
 echo "passed: $passed, failed: $failed".PHP_EOL;
 exit($failed ? 1 : 0);

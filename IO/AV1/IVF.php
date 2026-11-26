@@ -41,10 +41,12 @@ class IO_AV1_IVF {
         $this->fpsNum = $bit->getUI32LE();
         $this->fpsDenom = $bit->getUI32LE();
         $this->fps = $this->fpsNum / $this->fpsDenom;
-        $this->frameNum = $bit->getUI32LE() + 1;
+        // frame count in the header (may be 0 or 0xFFFFFFFF when the writer could not seek back)
+        $this->frameNum = $bit->getUI32LE();
         $bit->incrementOffset(4, 0);
         $this->frames = [];
-        for ($i = 0 ; $i < $this->frameNum ; $i++) {
+        // read frames until the data ends, regardless of the header count
+        while ($bit->hasNextData(1)) {
             $frame = [];
             $frame["frameSize"] = $bit->getUI32LE();
             $frame["timestamp"] = $bit->getUI64LE();
@@ -61,7 +63,7 @@ class IO_AV1_IVF {
         }
     }
     function getFrameNum() {
-        return $this->frameNum;
+        return count($this->frames);
     }
     function getPayload($i) {
         return $this->frames[$i]["payload"];
@@ -72,7 +74,7 @@ class IO_AV1_IVF {
         echo "frameRate:{$this->fps}={$this->fpsNum}/{$this->fpsDenom} frameNum:{$this->frameNum}\n";
         $count_frames = count($this->frames);
         if ($this->frameNum != $count_frames) {
-            fprintf(STDERR, "Error: frameNum:{$this->frameNum} != count(frames):$count_frames\n");
+            fprintf(STDERR, "Warning: frameNum:{$this->frameNum} (header) != count(frames):$count_frames\n");
         }
         foreach ($this->frames as $i => $frame) {
             $frameSize = $frame["frameSize"];
