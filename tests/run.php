@@ -127,21 +127,43 @@ if (is_object($av1)) {
 }
 
 /*
- * not implemented parts throw Exception
+ * sequence header with decoder_model_info and operating_parameters_info (5.5.4, 5.5.5)
  */
-$obu = new IO_AV1_OBU();
-foreach (array('parse_decoder_model_info', 'parse_operating_paramters_info') as $method) {
-    $bit = new IO_AV1_Bit();
-    $bit->input("\0\0\0\0");
-    try {
-        $obu->$method($bit);
-        $v = 'no exception';
-    } catch (Exception $e) {
-        $v = 'Exception';
-    } catch (Throwable $e) {
-        $v = get_class($e).": ".$e->getMessage();
+$s = '000 0 0 1'.sprintf('%032b', 1001).sprintf('%032b', 30000).'1 1'. // timing_info, num_ticks_per_picture_minus_1=0
+    '1'.                                                // decoder_model_info_present_flag
+    '01001'.sprintf('%032b', 90000).'00100 00111'.      // decoder_model_info (buffer_delay_length_minus_1=9)
+    '1 00001'.                                          // initial_display_delay_present_flag, operating_points_cnt_minus_1=1
+    // op 0: idc=0x101 seq_level_idx=8 seq_tier=1, decoder model present (f(10) 700, f(10) 300, low_delay 1), delay 9
+    sprintf('%012b', 0x101).'01000 1'.'1'.sprintf('%010b', 700).sprintf('%010b', 300).'1'.'1 1001'.
+    // op 1: idc=0x103 seq_level_idx=5, no decoder model, no initial display delay
+    sprintf('%012b', 0x103).'00101'.'0'.'0'.
+    seqTail(false);
+$av1 = parseAV1(obu(1, bits2bytes($s)));
+check('decoder_model_info parse', true, is_object($av1));
+if (is_object($av1)) {
+    $sh = $av1->OBU->OBUs[0]['sequence_header_obu'];
+    check('decoder_model_info', array('buffer_delay_length_minus_1' => 9, 'num_units_in_decoding_tick' => 90000,
+                                      'buffer_removal_time_length_minus_1' => 4,
+                                      'frame_presentation_time_length_minus_1' => 7), $sh['decoder_model_info']);
+    check('decoder_model_present_for_this_op', array(1, 0), $sh['decoder_model_present_for_this_op']);
+    check('operating_parameters_info', array(0 => array('decoder_buffer_delay' => 700, 'encoder_buffer_delay' => 300,
+                                                        'low_delay_mode_flag' => 1)),
+          $sh['operating_parameters_info']);
+    check('decoder_model seq_tier', array(1, 0), $sh['seq_tier']);
+    check('decoder_model initial_display_delay_minus_1', array(0 => 9), $sh['initial_display_delay_minus_1']);
+    check('decoder_model operating_point_idc', array(0x101, 0x103), $sh['operating_point_idc']);
+    check('decoder_model frame_width_minus_1', 15, $sh['frame_width_minus_1']);
+    check('decoder_model film_grain_params_present', 1, $sh['film_grain_params_present']);
+    list($output, $warnings) = dumpOf($av1, array());
+    check('decoder_model dump warnings', array(), $warnings);
+    foreach (array("    decoder_model_info:\n      buffer_delay_length_minus_1:9 num_units_in_decoding_tick:90000\n".
+                   "      buffer_removal_time_length_minus_1:4 frame_presentation_time_length_minus_1:7\n",
+                   "        decoder_model_present_for_this_op_0:1\n          operating_parameters_info_0:\n".
+                   "            decoder_buffer_delay:700 encoder_buffer_delay:300 low_delay_mode_flag:1\n",
+                   "        decoder_model_present_for_this_op_1:0\n") as $line) {
+        check('decoder_model dump '.strtok($line, ':'), true, strpos($output, $line) !== false);
     }
-    check("$method throws Exception", 'Exception', $v);
+    check('decoder_model dump not implemented', false, strpos($output, 'not implemented') !== false);
 }
 
 /*

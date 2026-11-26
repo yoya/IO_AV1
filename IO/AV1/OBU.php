@@ -316,6 +316,7 @@ class IO_AV1_OBU {
             $obu["decoder_model_present_for_this_op"]         = [];
             $obu["initial_display_delay_present_for_this_op"] = [];
             $obu["initial_display_delay_minus_1"]             = [];
+            $obu["operating_parameters_info"]                 = [];
             for ($i = 0; $i <= $obu["operating_points_cnt_minus_1"]; $i++) {
                 $obu["operating_point_idc"][$i] = $bit->get_f(12);
                 $obu["seq_level_idx"][$i] = $bit->get_f(5);
@@ -327,7 +328,7 @@ class IO_AV1_OBU {
                 if ($obu["decoder_model_info_present_flag"]) {
                     $obu["decoder_model_present_for_this_op"][$i] = $bit->get_f(1);
                     if ($obu["decoder_model_present_for_this_op"][$i]) {
-                        $obu["operating_paramters_info"] = $this->parse_operating_paramters_info($bit);
+                        $obu["operating_parameters_info"][$i] = $this->parse_operating_parameters_info($bit, $obu["decoder_model_info"]);
                     }
                 } else {
                     $obu["decoder_model_present_for_this_op"][$i] = 0;
@@ -495,12 +496,20 @@ class IO_AV1_OBU {
     // 5.5.4. Decoder model info syntax
     function parse_decoder_model_info($bit) {
         $info = [];
-        throw new Exception("parse_decoder_model_info: not implemented yet");
+        $info["buffer_delay_length_minus_1"]            = $bit->get_f(5);
+        $info["num_units_in_decoding_tick"]             = $bit->get_f(32);
+        $info["buffer_removal_time_length_minus_1"]     = $bit->get_f(5);
+        $info["frame_presentation_time_length_minus_1"] = $bit->get_f(5);
+        return $info;
     }
     // 5.5.5. Operating parameters info syntax
-    function parse_operating_paramters_info($bit) {
+    function parse_operating_parameters_info($bit, $decoder_model_info) {
         $info = [];
-        throw new Exception("parse_operating_parameters_info: not implemented yet");
+        $n = $decoder_model_info["buffer_delay_length_minus_1"] + 1;
+        $info["decoder_buffer_delay"] = $bit->get_f($n);
+        $info["encoder_buffer_delay"] = $bit->get_f($n);
+        $info["low_delay_mode_flag"]  = $bit->get_f(1);
+        return $info;
     }
     // 5.6. Temporal delimiter obu syntax
     function parse_temporal_delimiter_obu($bit) {
@@ -605,7 +614,7 @@ class IO_AV1_OBU {
                 if ($obu["decoder_model_info_present_flag"]) {
                     echo "        decoder_model_present_for_this_op_$i:{$obu["decoder_model_present_for_this_op"][$i]}\n";
                     if ($obu["decoder_model_present_for_this_op"][$i]) {
-                        $this->dump_operating_paramters_info($obu["operating_paramters_info"], $opts);
+                        $this->dump_operating_parameters_info($obu["operating_parameters_info"][$i], $i, $opts);
                     }
                 } else {
                     echo "      (decoder_model_present_for_this_op_$i:{$obu['decoder_model_present_for_this_op'][$i]})\n";
@@ -777,11 +786,18 @@ class IO_AV1_OBU {
     }
     // 5.5.4. Decoder model info syntax
     function dump_decoder_model_info($info, $opts) {
-        echo "WARN: dump_decoder_model_info not implemented yet.\n";
+        echo "    decoder_model_info:\n";
+        echo "      buffer_delay_length_minus_1:{$info['buffer_delay_length_minus_1']}";
+        echo " num_units_in_decoding_tick:{$info['num_units_in_decoding_tick']}\n";
+        echo "      buffer_removal_time_length_minus_1:{$info['buffer_removal_time_length_minus_1']}";
+        echo " frame_presentation_time_length_minus_1:{$info['frame_presentation_time_length_minus_1']}\n";
     }
     // 5.5.5. Operating parameters info syntax
-    function dump_operating_paramters_info($info, $opts) {
-        echo "WARN: dump_operating_paramters_info not implemented yet.\n";
+    function dump_operating_parameters_info($info, $op, $opts) {
+        echo "          operating_parameters_info_$op:\n";
+        echo "            decoder_buffer_delay:{$info['decoder_buffer_delay']}";
+        echo " encoder_buffer_delay:{$info['encoder_buffer_delay']}";
+        echo " low_delay_mode_flag:{$info['low_delay_mode_flag']}\n";
     }
     // 5.6. Temporal delimiter obu syntax
     function dump_temporal_delimiter_obu($opts) {
