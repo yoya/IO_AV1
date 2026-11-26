@@ -99,5 +99,23 @@ if (is_object($av1)) {
     check('timing_info film_grain_params_present', 1, $sh['film_grain_params_present']);
 }
 
+/*
+ * not implemented parts throw Exception
+ */
+$obu = new IO_AV1_OBU();
+foreach (array('parse_decoder_model_info', 'parse_operating_paramters_info') as $method) {
+    $bit = new IO_AV1_Bit();
+    $bit->input("\0\0\0\0");
+    try {
+        $obu->$method($bit);
+        $v = 'no exception';
+    } catch (Exception $e) {
+        $v = 'Exception';
+    } catch (Throwable $e) {
+        $v = get_class($e).": ".$e->getMessage();
+    }
+    check("$method throws Exception", 'Exception', $v);
+}
+
 echo "passed: $passed, failed: $failed".PHP_EOL;
 exit($failed ? 1 : 0);

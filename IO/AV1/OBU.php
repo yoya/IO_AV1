@@ -494,12 +494,12 @@ class IO_AV1_OBU {
     // 5.5.4. Decoder model info syntax
     function parse_decoder_model_info($bit) {
         $info = [];
-        throw "ERROR: parse_decoder_model_info: not implemented yet\n";
+        throw new Exception("parse_decoder_model_info: not implemented yet");
     }
     // 5.5.5. Operating parameters info syntax
     function parse_operating_paramters_info($bit) {
         $info = [];
-        throw "ERROR: parse_operating_parameters_info: not implemented yet\n";
+        throw new Exception("parse_operating_parameters_info: not implemented yet");
     }
     // 5.6. Temporal delimiter obu syntax
     function parse_temporal_delimiter_obu($bit) {
