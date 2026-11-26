@@ -193,5 +193,14 @@ try {
 }
 check('isIVF version 1', false, $v);
 
+/*
+ * IVF dump header line
+ */
+$payload = obu(2, '');
+$ivf = "DKIF".pack('vv', 0, 32)."AV01".pack('vvVVVV', 16, 16, 30, 1, 0, 0).
+    pack('V', strlen($payload)).pack('P', 0).$payload;
+list($output, $warnings) = dumpOf(parseAV1($ivf), array());
+check('ivf dump header', true, strpos($output, "codec:AV01 width:16 height:16 frameRate:30=30/1") !== false);
+
 echo "passed: $passed, failed: $failed".PHP_EOL;
 exit($failed ? 1 : 0);

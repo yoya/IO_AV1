@@ -68,7 +68,7 @@ class IO_AV1_IVF {
     }
     function dump($opts = array()) {
         echo "signature:{$this->signature} version:{$this->version} headerLength:{$this->headerLength}\n";
-        echo "codec:{$this->codec} width:{$this->width} height:{$this->height} xo";
+        echo "codec:{$this->codec} width:{$this->width} height:{$this->height} ";
         echo "frameRate:{$this->fps}={$this->fpsNum}/{$this->fpsDenom} frameNum:{$this->frameNum}\n";
         $count_frames = count($this->frames);
         if ($this->frameNum != $count_frames) {
