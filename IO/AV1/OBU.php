@@ -216,13 +216,14 @@ class IO_AV1_OBU {
         $bit = new IO_AV1_Bit();
         $bit->input($data);
         while ($bit->hasNextData(1)) {
+                $obuStart = $bit->get_position();
                 $obu_header = $this->parse_obu_header($bit, $opts);
                 $obu_type           = $obu_header["obu_type"];
                 $obu_extension_flag = $obu_header["obu_extension_flag"];
                 if ($obu_header["obu_has_size_field"]) {
                     $obu_size = $bit->get_leb128();
                 } else {
-                    $obu_size = strlen($data) - 1 - $obu_extension_flag;
+                    $obu_size = strlen($data) - $obuStart - 1 - $obu_extension_flag;
                 }
                 if (($obu_type != self::OBU_TEMPORAL_DELIMITER) &&
                     ($obu_size == 0)) {

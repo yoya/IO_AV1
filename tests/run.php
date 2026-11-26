@@ -133,5 +133,16 @@ check('frame_id fields', array('delta_frame_id_length_minus_2' => 5, 'additional
                                'enable_intra_edge_filter' => 1, 'enable_cdef' => 1,
                                'film_grain_params_present' => 1), $v);
 
+/*
+ * obu_size of an OBU without obu_size field (not the first OBU)
+ */
+$seq = bits2bytes('000 0 0 0'.'0 00000 000000000000 00000'.seqTail(false));
+$av1 = parseAV1(obu(2, '').obu(1, $seq, false));
+$v = array();
+foreach ($av1->OBU->OBUs as $o) {
+    $v []= array($o['obu_header']['obu_type'], $o['obu_size'], $o['_offset']);
+}
+check('obu_size without size field', array(array(2, 0, 2), array(1, strlen($seq), 3)), $v);
+
 echo "passed: $passed, failed: $failed".PHP_EOL;
 exit($failed ? 1 : 0);
