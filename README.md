@@ -111,3 +111,9 @@ OBU_SEQUENCE_HEADER size:9
   - https://wiki.multimedia.cx/index.php/IVF
 - AV1 のサンプル (Netflix)
   - http://download.opencontent.netflix.com/?prefix=AV1/
+
+## IO_Bit の利用箇所
+
+IVF のヘッダをリトルエンディアンで読み取り、OBU のビットフィールドは `IO_AV1_Bit`（`IO_Bit` の派生クラス）で読み取ります。
+
+[IO_Bit Wiki](https://github.com/yoya/IO_Bit/wiki)
