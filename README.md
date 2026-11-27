@@ -46,7 +46,7 @@ codec:AV01 width:16 height:16 frameRate:30=30/1 frameNum:1
     film_grain_params_present:0
 ```
 
-`-f -` で標準入力から読みます。
+リポジトリ直下から実行する場合は `php sample/av1dump.php -f input.ivf` を使います。`-f -` で標準入力から読みます。
 
 - PHP から使う
 
