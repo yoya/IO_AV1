@@ -269,5 +269,320 @@ foreach (array(array(2, 2), array(0, 2), array(0xFFFFFFFF, 2), array(1, 1)) as $
     check("ivf header count $count dump stderr", $expect, $stderr);
 }
 
+/*
+ * test data (tests/data/make.php)
+ */
+$datadir = $root.'/tests/data';
+
+// warnings and notices (except deprecations) outside dumpOf() are failures
+$warnings = array();
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+    global $warnings;
+    $warnings []= "$errstr at $errfile:$errline";
+    return true;
+}, E_ALL & ~E_DEPRECATED);
+
+// run php in a child process with a time limit, returns [status, stdout, stderr]
+function runPHP($args, $stdin = '') {
+    global $root;
+    $cmd = array('timeout', '20', PHP_BINARY, '-d', 'display_errors=stderr', '-d', 'log_errors=0',
+                 '-d', 'error_reporting='.(E_ALL & ~E_DEPRECATED), '-d', 'include_path='.get_include_path());
+    $cmd = implode(' ', array_map('escapeshellarg', array_merge($cmd, $args)));
+    $proc = proc_open($cmd, array(array('pipe', 'r'), array('pipe', 'w'), array('pipe', 'w')), $pipes, $root);
+    fwrite($pipes[0], $stdin);
+    fclose($pipes[0]);
+    $stdout = stream_get_contents($pipes[1]);
+    $stderr = stream_get_contents($pipes[2]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    return array(proc_close($proc), $stdout, $stderr);
+}
+
+function pick($arr, $keys) {
+    $values = array();
+    foreach ($keys as $k) {
+        $values[$k] = array_key_exists($k, $arr) ? $arr[$k] : '(unset)';
+    }
+    return $values;
+}
+// [obu_type, obu_extension_flag, obu_has_size_field, obu_size, _offset] of every OBU
+function obuSummary($obu) {
+    $list = array();
+    foreach ($obu->OBUs as $o) {
+        $h = $o['obu_header'];
+        $list []= array($h['obu_type'], $h['obu_extension_flag'], $h['obu_has_size_field'], $o['obu_size'], $o['_offset']);
+    }
+    return $list;
+}
+function parseFile($name) {
+    global $datadir;
+    return parseAV1(file_get_contents("$datadir/$name"));
+}
+function dumpLines($name, $output, $lines) {
+    foreach ($lines as $line) {
+        check("$name dump ".trim(strtok($line, "\n")), true, strpos($output, $line) !== false);
+    }
+}
+$toolKeys = array('frame_width_bits_minus_1', 'frame_height_bits_minus_1', 'frame_width_minus_1', 'frame_height_minus_1',
+                  'frame_id_numbers_present_flag', 'use_128x128_superblock', 'enable_filter_intra', 'enable_intra_edge_filter',
+                  'enable_interintra_compound', 'enable_masked_compound', 'enable_warped_motion', 'enable_dual_filter',
+                  'enable_order_hint', 'enable_jnt_comp', 'enable_ref_frame_mvs', 'seq_force_screen_content_tools',
+                  'seq_force_integer_mv', 'enable_superres', 'enable_cdef', 'enable_restoration', 'film_grain_params_present');
+
+/*
+ * basic.obu: TD, sequence header, frame (extension header), metadata (3 byte leb128),
+ *   padding (2 byte leb128), frame header without obu_size
+ */
+$av1 = parseFile('basic.obu');
+check('basic.obu parse', true, is_object($av1));
+check('basic.obu not IVF', null, $av1->IVF);
+check('basic.obu OBUs', array(
+    array(2, 0, 1, 0, 2),
+    array(1, 0, 1, 16, 4),
+    array(6, 1, 1, 4, 23),
+    array(5, 0, 1, 3, 31),
+    array(15, 0, 1, 200, 37),
+    array(3, 0, 0, 2, 238),
+), obuSummary($av1->OBU));
+check('basic.obu extension header', array('temporal_id' => 2, 'spatial_id' => 1, 'reserved_3bits' => 0),
+      $av1->OBU->OBUs[2]['obu_header']['obu_extention_header']);
+check('basic.obu forbidden / reserved bits', array(0, 0),
+      array($av1->OBU->OBUs[1]['obu_header']['obu_forbidden_bit'], $av1->OBU->OBUs[1]['obu_header']['obu_reserved_1bit']));
+$sh = $av1->OBU->OBUs[1]['sequence_header_obu'];
+check('basic.obu sequence header', array(
+    'seq_profile' => 0, 'still_picture' => 0, 'reduced_still_picture_header' => 0, 'timing_info_present_flag' => 0,
+    'decoder_model_info_present_flag' => 0, 'initial_display_delay_present_flag' => 0, 'operating_points_cnt_minus_1' => 0,
+    'operating_point_idc' => array(0), 'seq_level_idx' => array(8), 'seq_tier' => array(1),
+    'decoder_model_present_for_this_op' => array(0)),
+    pick($sh, array('seq_profile', 'still_picture', 'reduced_still_picture_header', 'timing_info_present_flag',
+                    'decoder_model_info_present_flag', 'initial_display_delay_present_flag', 'operating_points_cnt_minus_1',
+                    'operating_point_idc', 'seq_level_idx', 'seq_tier', 'decoder_model_present_for_this_op')));
+check('basic.obu tools', array_combine($toolKeys, array(10, 10, 1919, 1079, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0)),
+      pick($sh, $toolKeys));
+check('basic.obu frame id / order hint', array(5, 3, 0, 1, 0, 6),
+      array($sh['delta_frame_id_length_minus_2'], $sh['additional_frame_id_length_minus_1'],
+            $sh['seq_choose_screen_content_tools'], $sh['seq_force_screen_content_tools'],
+            $sh['seq_choose_integer_mv'], $sh['order_hint_bits_minus_1']));
+check('basic.obu color_config', array('high_bitdepth' => 0, 'mono_chrome' => 0, 'color_description_present_flag' => 1,
+                                      'color_primaries' => 1, 'transfer_characteristics' => 1, 'matrix_coefficients' => 1,
+                                      'color_range' => 1, 'subsampling_x' => 1, 'subsampling_y' => 1,
+                                      'chroma_sample_position' => 1, 'separate_uv_delta_q' => 1), $sh['color_config']);
+check('basic.obu derived values', array(0, 7, 8, 3, 0),
+      array($av1->OBU->OperatingPointIdc, $av1->OBU->OrderHintBits, $av1->OBU->BitDepth, $av1->OBU->NumPlanes,
+            $av1->OBU->SeenFrameHeader));
+list($output, $w) = dumpOf($av1, array());
+check('basic.obu dump warnings', array(), $w);
+dumpLines('basic.obu', $output, array(
+    "  [0]obu_type:2 (OBU_TEMPORAL_DELIMITER)  obu_size:0\n",
+    "  [1]obu_type:1 (OBU_SEQUENCE_HEADER)  obu_size:16\n",
+    "    obu_extention_header:\n      temporal_id:2 spatial_id:1 reserved_3bits:0\n",
+    "  [4]obu_type:15 (OBU_PADDING)  obu_size:200\n",
+    "  [5]obu_type:3 (OBU_FRAME_HEADER)  (obu_size:2)\n",
+    "      seq_tier_0:1\n",
+    "    frame_width_minus_1:1919 frame_height_minus_1:1079\n",
+    "      delta_frame_id_length_minus_2:5 additional_frame_id_length_minus_1:3\n",
+    "        seq_force_screen_content_tools:1\n",
+    "          seq_force_integer_mv:1\n",
+    "          order_hint_bits_minus_1:6 OrderHintBits:7\n",
+    "        color_primaries:1(BT_709)\n",
+    "        chroma_sample_position:1(CSP_VERTICAL)\n",
+));
+// hexdump option: each OBU payload
+list($output, $w) = dumpOf($av1, array('hexdump' => true));
+check('basic.obu hexdump warnings', array(), $w);
+check('basic.obu hexdump padding', 200, substr_count($output, "aa "));
+check('basic.obu hexdump frame header', true, strpos($output, " 55 66 ") !== false);
+check('basic.obu hexdump count', 6, substr_count($output, "  0123456789abcdef\n"));
+
+/*
+ * timing.obu: timing_info, decoder_model_info, 3 operating points
+ */
+$av1 = parseFile('timing.obu');
+check('timing.obu parse', true, is_object($av1));
+$sh = $av1->OBU->OBUs[1]['sequence_header_obu'];
+check('timing.obu timing_info', array('num_units_in_display_tick' => 1001, 'time_scale' => 60000,
+                                      'equal_picture_interval' => 1, 'num_ticks_per_picture_minus_1' => 1), $sh['timing_info']);
+check('timing.obu decoder_model_info', array('buffer_delay_length_minus_1' => 15, 'num_units_in_decoding_tick' => 60000,
+                                             'buffer_removal_time_length_minus_1' => 23,
+                                             'frame_presentation_time_length_minus_1' => 15), $sh['decoder_model_info']);
+check('timing.obu operating points', array(
+    'operating_points_cnt_minus_1' => 2,
+    'operating_point_idc' => array(0x307, 0x103, 0x101),
+    'seq_level_idx' => array(12, 9, 4),
+    'seq_tier' => array(0, 1, 0),
+    'decoder_model_present_for_this_op' => array(1, 0, 1),
+    'operating_parameters_info' => array(
+        0 => array('decoder_buffer_delay' => 0x1234, 'encoder_buffer_delay' => 0x0567, 'low_delay_mode_flag' => 0),
+        2 => array('decoder_buffer_delay' => 1, 'encoder_buffer_delay' => 2, 'low_delay_mode_flag' => 1)),
+    'initial_display_delay_present_for_this_op' => array(1, 0, 1),
+    'initial_display_delay_minus_1' => array(0 => 3, 2 => 15)),
+    pick($sh, array('operating_points_cnt_minus_1', 'operating_point_idc', 'seq_level_idx', 'seq_tier',
+                    'decoder_model_present_for_this_op', 'operating_parameters_info',
+                    'initial_display_delay_present_for_this_op', 'initial_display_delay_minus_1')));
+check('timing.obu OperatingPointIdc (operating point 0)', 0x307, $av1->OBU->OperatingPointIdc);
+check('timing.obu size', array(160 - 1, 90 - 1, 10), array($sh['frame_width_minus_1'], $sh['frame_height_minus_1'], $av1->OBU->BitDepth));
+check('timing.obu color_config', array('color_primaries' => 2, 'transfer_characteristics' => 2, 'matrix_coefficients' => 2,
+                                       'color_range' => 0, 'chroma_sample_position' => 2, 'separate_uv_delta_q' => 0),
+      pick($sh['color_config'], array('color_primaries', 'transfer_characteristics', 'matrix_coefficients',
+                                      'color_range', 'chroma_sample_position', 'separate_uv_delta_q')));
+list($output, $w) = dumpOf($av1, array());
+check('timing.obu dump warnings', array(), $w);
+dumpLines('timing.obu', $output, array(
+    "      num_units_in_display_tick:1001 time_scale:60000 equal_picture_interval:1\n        num_ticks_per_picture_minus_1:1\n",
+    "            decoder_buffer_delay:4660 encoder_buffer_delay:1383 low_delay_mode_flag:0\n",
+    "        decoder_model_present_for_this_op_1:0\n",
+    "        initial_display_delay_present_for_this_op_1:0\n      operating_point_idc_2:257\n",
+    "          initial_display_delay_minus_1_2:15\n",
+    "      (seq_tier_2:0)\n",
+    "    OperatingPointIdc:775\n",
+    "        chroma_sample_position:2(CSP_COLOCAED)\n",
+));
+
+/*
+ * still.obu: reduced_still_picture_header, profile 1 sRGB
+ */
+$av1 = parseFile('still.obu');
+check('still.obu parse', true, is_object($av1));
+$sh = $av1->OBU->OBUs[0]['sequence_header_obu'];
+check('still.obu sequence header', array(
+    'seq_profile' => 1, 'still_picture' => 1, 'reduced_still_picture_header' => 1, 'timing_info_present_flag' => 0,
+    'operating_points_cnt_minus_1' => 0, 'operating_point_idc' => array(0), 'seq_level_idx' => array(31),
+    'seq_tier' => array(0), 'decoder_model_present_for_this_op' => array(0),
+    'initial_display_delay_present_for_this_op' => array(0)),
+    pick($sh, array('seq_profile', 'still_picture', 'reduced_still_picture_header', 'timing_info_present_flag',
+                    'operating_points_cnt_minus_1', 'operating_point_idc', 'seq_level_idx', 'seq_tier',
+                    'decoder_model_present_for_this_op', 'initial_display_delay_present_for_this_op')));
+check('still.obu tools', array_combine($toolKeys, array(15, 15, 65535, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 1)),
+      pick($sh, $toolKeys));
+check('still.obu color_config (sRGB)', array('high_bitdepth' => 1, 'mono_chrome' => 0, 'color_description_present_flag' => 1,
+                                             'color_primaries' => 1, 'transfer_characteristics' => 13, 'matrix_coefficients' => 0,
+                                             'color_range' => 1, 'subsampling_x' => 0, 'subsampling_y' => 0,
+                                             'separate_uv_delta_q' => 0), $sh['color_config']);
+check('still.obu derived values', array(0, 10, 3), array($av1->OBU->OrderHintBits, $av1->OBU->BitDepth, $av1->OBU->NumPlanes));
+list($output, $w) = dumpOf($av1, array());
+check('still.obu dump warnings', array(), $w);
+dumpLines('still.obu', $output, array(
+    " (seq_level_idx[0]:31)",
+    "    frame_width_minus_1:65535 frame_height_minus_1:0\n",
+    "        transfer_characteristics:13(TC_SRGB)\n",
+    "        matrix_coefficients:0(MC_IDENTITY)\n",
+    "        (color_range:1)\n        (subsampling_x:0) (subsampling_y:0)\n",
+    "    film_grain_params_present:1\n",
+));
+
+/*
+ * profile2.obu: 12 bit 4:2:2, mono.obu: 10 bit monochrome
+ */
+$av1 = parseFile('profile2.obu');
+check('profile2.obu parse', true, is_object($av1));
+$sh = $av1->OBU->OBUs[0]['sequence_header_obu'];
+check('profile2.obu color_config', array('high_bitdepth' => 1, 'twelve_bit' => 1, 'mono_chrome' => 0,
+                                         'color_description_present_flag' => 1, 'color_primaries' => 9,
+                                         'transfer_characteristics' => 16, 'matrix_coefficients' => 9,
+                                         'color_range' => 1, 'subsampling_x' => 1, 'subsampling_y' => 0,
+                                         'separate_uv_delta_q' => 1), $sh['color_config']);
+check('profile2.obu derived values', array(12, 3), array($av1->OBU->BitDepth, $av1->OBU->NumPlanes));
+list($output, $w) = dumpOf($av1, array());
+check('profile2.obu dump warnings', array(), $w);
+dumpLines('profile2.obu', $output, array(
+    "        twelve_bit:1\n        BitDepth:12\n",
+    "        transfer_characteristics:16(TC_SMPTE_2084)\n",
+    "          subsampling_x:1\n            subsampling_y:0\n",
+));
+$av1 = parseFile('mono.obu');
+check('mono.obu parse', true, is_object($av1));
+$sh = $av1->OBU->OBUs[0]['sequence_header_obu'];
+check('mono.obu color_config', array('high_bitdepth' => 1, 'mono_chrome' => 1, 'color_description_present_flag' => 0,
+                                     'color_primaries' => 2, 'transfer_characteristics' => 2, 'matrix_coefficients' => 2,
+                                     'color_range' => 1, 'subsampling_x' => 1, 'subsampling_y' => 1,
+                                     'separate_uv_delta_q' => 0),
+      pick($sh['color_config'], array('high_bitdepth', 'mono_chrome', 'color_description_present_flag', 'color_primaries',
+                                      'transfer_characteristics', 'matrix_coefficients', 'color_range',
+                                      'subsampling_x', 'subsampling_y', 'separate_uv_delta_q')));
+check('mono.obu derived values', array(10, 1), array($av1->OBU->BitDepth, $av1->OBU->NumPlanes));
+check('mono.obu film_grain after color_config', 0, $sh['film_grain_params_present']);
+list($output, $w) = dumpOf($av1, array());
+check('mono.obu dump warnings', array(), $w);
+check('mono.obu dump NumPlanes', true, strpos($output, "      NumPlanes:1\n") !== false);
+
+/*
+ * av1.ivf: IVF header, 3 frames, 64 bit timestamp
+ */
+$data = file_get_contents("$datadir/av1.ivf");
+check('av1.ivf isIVF', true, IO_AV1_IVF::isIVF($data));
+$av1 = parseAV1($data);
+check('av1.ivf parse', true, is_object($av1));
+$ivf = $av1->IVF;
+check('av1.ivf not OBU', null, $av1->OBU);
+check('av1.ivf header', array('DKIF', 0, 32, 'AV01', 16, 16, 30000, 1001, 3),
+      array($ivf->signature, $ivf->version, $ivf->headerLength, $ivf->codec, $ivf->width, $ivf->height,
+            $ivf->fpsNum, $ivf->fpsDenom, $ivf->frameNum));
+check('av1.ivf fps', 30000 / 1001, $ivf->fps);
+check('av1.ivf getFrameNum', 3, $ivf->getFrameNum());
+$v = array();
+foreach ($ivf->frames as $frame) {
+    $v []= array($frame['frameSize'], $frame['timestamp'], strlen($frame['payload']));
+}
+check('av1.ivf frames', array(array(24, 0, 24), array(6, 1, 6), array(4, 0x100000002, 4)), $v);
+check('av1.ivf getPayload(1)', "\x12\x00\x32\x02\x11\x12", $ivf->getPayload(1));
+check('av1.ivf frame 0 OBUs', array(array(2, 0, 1, 0, 2), array(1, 0, 1, 9, 4), array(6, 0, 1, 9, 15)),
+      obuSummary($ivf->frames[0]['obu']));
+check('av1.ivf frame 2 OBUs', array(array(2, 0, 1, 0, 2), array(6, 0, 0, 1, 3)), obuSummary($ivf->frames[2]['obu']));
+check('av1.ivf frame 0 sequence header size', array('frame_width_minus_1' => 15, 'frame_height_minus_1' => 15),
+      pick($ivf->frames[0]['obu']->OBUs[1]['sequence_header_obu'], array('frame_width_minus_1', 'frame_height_minus_1')));
+list($output, $w) = dumpOf($av1, array());
+check('av1.ivf dump warnings', array(), $w);
+dumpLines('av1.ivf', $output, array(
+    "signature:DKIF version:0 headerLength:32\n",
+    "codec:AV01 width:16 height:16 frameRate:".(30000 / 1001)."=30000/1001 frameNum:3\n",
+    "[0]frameSize:24 time:0 payload:12 00 0a 09 00 00 00 01 ...\n",
+    "[1]frameSize:6 time:1 payload:12 00 32 02 11 12 ...\n",
+    "[2]frameSize:4 time:4294967298 payload:12 00 30 21 ...\n",
+    "  [1]obu_type:6 (OBU_FRAME)  (obu_size:1)\n",
+));
+check('isIVF short data', false, IO_AV1_IVF::isIVF(substr($data, 0, 31)));
+check('isIVF bad signature', false, IO_AV1_IVF::isIVF("DKIX".substr($data, 4)));
+
+/*
+ * broken input
+ */
+check('truncated.ivf', 'IO_Bit_Exception: getData: 101 < 98 + 4', parseFile('truncated.ivf'));
+check('truncated.ivf frame header', true,
+      strpos(parseAV1(substr($data, 0, 32 + 6)), 'IO_Bit_Exception: ') === 0);
+check('size0.obu', 'Exception: obusize == 0', parseFile('size0.obu'));
+check('seq_truncated.obu', true, strpos(parseFile('seq_truncated.obu'), 'IO_Bit_Exception: ') === 0);
+check('profile3.obu', 'Exception: must be seq_profile:3 <= 2)', parseFile('profile3.obu'));
+$av1 = parseAV1('');
+check('empty input', array(), $av1->OBU->OBUs);
+
+/*
+ * sample/av1dump.php on the test data
+ */
+foreach (array('basic.obu' => "  [5]obu_type:3 (OBU_FRAME_HEADER)  (obu_size:2)\n",
+               'timing.obu' => "    OperatingPointIdc:775\n",
+               'still.obu' => "    film_grain_params_present:1\n",
+               'profile2.obu' => "        BitDepth:12\n",
+               'mono.obu' => "      NumPlanes:1\n",
+               'av1.ivf' => "[2]frameSize:4 time:4294967298") as $file => $expect) {
+    list($status, $stdout, $stderr) = runPHP(array($root.'/sample/av1dump.php', '-f', "$datadir/$file"));
+    check("av1dump $file exit status", 0, $status);
+    check("av1dump $file no warnings", '', $stderr);
+    check("av1dump $file output", true, strpos($stdout, $expect) !== false);
+}
+list($status, $stdout, $stderr) = runPHP(array($root.'/sample/av1dump.php', '-h', '-f', '-'), file_get_contents("$datadir/basic.obu"));
+check('av1dump -h stdin exit status', 0, $status);
+check('av1dump -h stdin no warnings', '', $stderr);
+check('av1dump -h stdin hexdump', true, strpos($stdout, "             0  1  2  3  4  5  6  7   8  9  a  b  c  d  e  f  0123456789abcdef\n") !== false);
+foreach (array('size0.obu' => 'obusize == 0', 'truncated.ivf' => 'getData: ') as $file => $expect) {
+    list($status, $stdout, $stderr) = runPHP(array($root.'/sample/av1dump.php', '-f', "$datadir/$file"));
+    check("av1dump $file exit status", 1, $status);
+    check("av1dump $file error", true, (strpos($stdout, "ERROR: av1dump: ") === 0) && (strpos($stdout, $expect) !== false));
+}
+list($status, $stdout, $stderr) = runPHP(array($root.'/sample/av1dump.php'));
+check('av1dump without -f exit status', 1, $status);
+check('av1dump without -f usage', true, strpos($stderr, "Usage: php av1dump.php") === 0);
+
+check('no warnings in this process', array(), $warnings);
+
 echo "passed: $passed, failed: $failed".PHP_EOL;
 exit($failed ? 1 : 0);
