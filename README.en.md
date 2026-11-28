@@ -93,6 +93,7 @@ OBU_SEQUENCE_HEADER size:9
 - Frame header, tile group, metadata and other OBUs are not parsed.
 - An OBU with `obu_size` 0 other than the temporal delimiter throws an exception.
 - The operating point is fixed to 0; OBUs are not selected by temporal_id / spatial_id of the extension header.
+- The Annex B (length delimited) format (`aomenc --annexb=1` and others) is not supported. It is not detected either: given such data, the leading lengths are read as OBU headers and wrong values are shown without an error.
 - PHP 8.2 or later prints Deprecated messages for dynamic properties. `php -d error_reporting='E_ALL & ~E_DEPRECATED' ...` hides them.
 
 # Test

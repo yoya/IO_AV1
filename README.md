@@ -95,6 +95,7 @@ OBU_SEQUENCE_HEADER size:9
 - frame header、tile group、metadata などの OBU は解釈しない。
 - temporal delimiter 以外で `obu_size` が 0 の OBU があると例外になる。
 - 操作点 (operating point) は 0 固定で、拡張ヘッダの temporal_id / spatial_id による選別はしない。
+- Annex B (Length delimited) 形式 (`aomenc --annexb=1` など) には対応していない。見分けもしないので、渡すと先頭の長さを OBU ヘッダとして読み、エラーにならずに誤った値を出す。
 - PHP 8.2 以降では動的プロパティの Deprecated メッセージが出る。`php -d error_reporting='E_ALL & ~E_DEPRECATED' ...` で消せる。
 
 # Test
