@@ -384,9 +384,11 @@ dumpLines('basic.obu', $output, array(
     "        seq_force_screen_content_tools:1\n",
     "          seq_force_integer_mv:1\n",
     "          order_hint_bits_minus_1:6 OrderHintBits:7\n",
-    "        color_primaries:1(BT_709)\n",
+    "        color_primaries:1(CP_BT_709)\n",
     "        chroma_sample_position:1(CSP_VERTICAL)\n",
 ));
+check('getCPName names', array('CP_BT_709', 'CP_EBU_3213'),
+      array(IO_AV1_OBU::getCPName(1), IO_AV1_OBU::getCPName(22)));
 // hexdump option: each OBU payload
 list($output, $w) = dumpOf($av1, array('hexdump' => true));
 check('basic.obu hexdump warnings', array(), $w);

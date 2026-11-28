@@ -57,7 +57,7 @@ class IO_AV1_OBU {
     const CP_SMPTE_432    = 12;
     const CP_EBU_3213     = 22;
     static $CPNameTable = [
-        self::CP_BT_709       => "BT_709",
+        self::CP_BT_709       => "CP_BT_709",
         self::CP_UNSPECIFIED  => "CP_UNSPECIFIED",
         self::CP_BT_470_M     => "CP_BT_470_M",
         self::CP_BT_470_B_G   => "CP_BT_470_B_G",
@@ -68,7 +68,7 @@ class IO_AV1_OBU {
         self::CP_XYZ          => "CP_XYZ",
         self::CP_SMPTE_431    => "CP_SMPTE_431",
         self::CP_SMPTE_432    => "CP_SMPTE_432",
-        self::CP_EBU_3213     => "CP_EBU_3213 ",
+        self::CP_EBU_3213     => "CP_EBU_3213",
     ];
     //
     const TC_RESERVED_0     = 0;
