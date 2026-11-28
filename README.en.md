@@ -44,7 +44,7 @@ codec:AV01 width:16 height:16 frameRate:30=30/1 frameNum:1
     film_grain_params_present:0
 ```
 
-`-f -` reads from standard input.
+To run from the top of the repository, use `php sample/av1dump.php -f input.ivf`. `-f -` reads from standard input.
 
 - From PHP
 
@@ -110,3 +110,9 @@ OBU_SEQUENCE_HEADER size:9
   - https://wiki.multimedia.cx/index.php/IVF
 - AV1 samples (Netflix)
   - http://download.opencontent.netflix.com/?prefix=AV1/
+
+## Where IO_Bit is used
+
+The IVF header is read in little endian, and the bit fields of OBUs are read with `IO_AV1_Bit` (a subclass of `IO_Bit`).
+
+[IO_Bit Wiki](https://github.com/yoya/IO_Bit/wiki)
